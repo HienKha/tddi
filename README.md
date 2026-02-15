@@ -1,10 +1,10 @@
-# TabTransformer with Uncertainty Estimation
+# TDDI with Uncertainty Estimation
 
-This repository contains a complete implementation of TabTransformer for drug-drug interaction prediction with uncertainty estimation using ensemble methods.
+This repository contains a complete implementation of TDDI for drug-drug interaction prediction with uncertainty estimation using ensemble methods.
 
 ## Features
 
-- **TabTransformer Architecture**: State-of-the-art transformer model for tabular data
+- **TDDI Architecture**: State-of-the-art transformer model for tabular data
 - **Uncertainty Estimation**: Ensemble-based uncertainty quantification using:
   - Entropy uncertainty
   - Variance uncertainty
@@ -19,7 +19,7 @@ This repository contains a complete implementation of TabTransformer for drug-dr
 1. Clone this repository:
 ```bash
 git clone <repository-url>
-cd tabtransformer_github
+cd TDDI_github
 ```
 
 2. Install dependencies:
@@ -32,7 +32,7 @@ pip install -r requirements.txt
 ### Basic Usage
 
 ```bash
-python run_tabtransformer.py \
+python run_TDDI.py \
     --train_path data_splits/train_extracted.csv \
     --test_path data_splits/test_extracted.csv \
     --valid_path data_splits/validation_extracted.csv \
@@ -47,7 +47,7 @@ python run_tabtransformer.py \
 If you have a list of features to drop:
 
 ```bash
-python run_tabtransformer.py \
+python run_TDDI.py \
     --train_path data_splits/train_extracted.csv \
     --test_path data_splits/test_extracted.csv \
     --valid_path data_splits/validation_extracted.csv \
@@ -71,9 +71,9 @@ python run_tabtransformer.py \
 ## Project Structure
 
 ```
-tabtransformer_github/
-├── run_tabtransformer.py    # Main training script
-├── models.py                 # Model classes (TabTransformer, FocalLoss)
+TDDI_github/
+├── run_TDDI.py    # Main training script
+├── models.py                 # Model classes (TDDI, FocalLoss)
 ├── utils.py                  # Utility classes (MemoryOptimizer, UncertaintyEstimator)
 ├── preprocessing.py          # Data preprocessing functions
 ├── training.py               # Training utilities
@@ -92,10 +92,10 @@ The `UncertaintyEstimator` class provides multiple uncertainty metrics:
 - **Mutual Information**: Measures epistemic uncertainty
 - **Confidence Scores**: Normalized confidence based on entropy
 
-### EnhancedTabTransformerWithImprovements
+### TDDI Model
 
 Main model wrapper that:
-- Creates TabTransformer models
+- Creates TDDI models
 - Manages ensemble of models
 - Provides uncertainty estimation via `predict_with_uncertainty()`
 
@@ -110,7 +110,7 @@ Main model wrapper that:
 ## Output
 
 The script generates:
-- **tabtransformer_results.csv**: Comprehensive results including:
+- **TDDI_results.csv**: Comprehensive results including:
   - Test accuracy and F1 scores
   - Cross-validation metrics
   - Uncertainty statistics
@@ -137,7 +137,7 @@ Default hyperparameters:
 
 ## Citation
 
-If you use this code, please cite the original TabTransformer paper and this implementation.
+If you use this code, please cite the original TDDI paper and this implementation.
 
 ## License
 

@@ -1,7 +1,3 @@
-"""
-Training utilities for TabTransformer.
-"""
-
 import torch
 import torch.nn as nn
 import numpy as np
@@ -23,7 +19,7 @@ def train_single_model(X_fold_train, y_fold_train, X_fold_val, y_fold_val,
         X_fold_val: Validation features
         y_fold_val: Validation labels
         fold_num: Fold number for logging
-        enhanced_model: EnhancedTabTransformerWithImprovements instance
+        enhanced_model: model instance
         best_params: Dictionary of hyperparameters
         categories: List of category sizes
         num_continuous: Number of continuous features
