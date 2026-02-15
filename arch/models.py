@@ -1,7 +1,3 @@
-"""
-Model classes for TabTransformer including loss functions.
-"""
-
 import torch
 import torch.nn as nn
 import numpy as np
@@ -13,8 +9,6 @@ from .utils import UncertaintyEstimator
 
 
 class FocalLoss(nn.Module):
-    """Focal Loss for handling class imbalance."""
-    
     def __init__(self, alpha=None, gamma=2.0, reduction='mean'):
         super(FocalLoss, self).__init__()
         self.alpha = alpha
@@ -37,10 +31,7 @@ class FocalLoss(nn.Module):
         else:
             return focal_loss
 
-
-class EnhancedTabTransformerWithImprovements:   
-    """Enhanced TabTransformer with uncertainty estimation and ensemble support."""
-    
+class TDDI_Model:
     def __init__(self, categories: List[int], num_continuous: int, 
                  num_classes: int, device: torch.device, 
                  best_params: Dict):
@@ -54,7 +45,6 @@ class EnhancedTabTransformerWithImprovements:
         self.interpreter = None
         
     def create_model(self) -> TabTransformer:
-        """Create a new TabTransformer model instance."""
         model = TabTransformer(
             categories=tuple(self.categories),
             num_continuous=self.num_continuous,
@@ -73,15 +63,6 @@ class EnhancedTabTransformerWithImprovements:
         return model
     
     def predict_with_uncertainty(self, test_df: pd.DataFrame) -> Dict:
-        """
-        Make predictions with uncertainty estimation using ensemble models.
-        
-        Args:
-            test_df: DataFrame with test data (may include 'class' column)
-        
-        Returns:
-            Dictionary with predictions, probabilities, and uncertainties
-        """
         test_df_enhanced = test_df.copy()
         
         X_test = test_df_enhanced.drop(columns=['class'], errors='ignore')
@@ -132,7 +113,6 @@ class EnhancedTabTransformerWithImprovements:
         }
     
     def get_feature_importance(self, test_loader: DataLoader) -> Dict[str, float]:
-        """Get feature importance using the interpreter."""
         if self.interpreter is None:
             raise ValueError("Interpreter not initialized. Set self.interpreter first.")
         return self.interpreter.permutation_importance(test_loader)

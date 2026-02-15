@@ -1,13 +1,8 @@
-"""
-Utility classes and functions for TabTransformer training and inference.
-"""
-
 import gc
 import torch
 import numpy as np
 from typing import Dict
 from torch.utils.data import DataLoader
-
 
 class MemoryOptimizer:        
     @staticmethod

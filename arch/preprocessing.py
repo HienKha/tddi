@@ -1,7 +1,3 @@
-"""
-Data preprocessing utilities.
-"""
-
 import pandas as pd
 import numpy as np
 import polars as pl
@@ -11,16 +7,6 @@ from .utils import MemoryOptimizer
 
 
 def load_and_clean_data(path, columns_to_drop):
-    """
-    Load CSV data and drop specified columns.
-    
-    Args:
-        path: Path to CSV file
-        columns_to_drop: List of column names to drop
-    
-    Returns:
-        DataFrame with columns dropped
-    """
     try:
         df = pl.read_csv(path)
         existing_cols_to_drop = [col for col in columns_to_drop if col in df.columns]
@@ -36,18 +22,6 @@ def load_and_clean_data(path, columns_to_drop):
 
 
 def preprocess_ultra_fast(train_df, test_df, valid_df, target_col='class'):
-    """
-    Fast preprocessing pipeline for tabular data.
-    
-    Args:
-        train_df: Training DataFrame
-        test_df: Test DataFrame
-        valid_df: Validation DataFrame
-        target_col: Name of target column
-    
-    Returns:
-        Tuple of preprocessed data and preprocessors
-    """
     X_train = train_df.drop(columns=[target_col])
     y_train = train_df[target_col]
     
@@ -80,14 +54,12 @@ def preprocess_ultra_fast(train_df, test_df, valid_df, target_col='class'):
     print(f"Categorical columns ({len(categorical_cols)}): {categorical_cols}")
     print(f"Numerical columns ({len(numerical_cols)}): Found {len(numerical_cols)} numerical columns")
     
-    # SUPER FAST CATEGORICAL ENCODING - Only for categorical columns
     print("Fast categorical encoding...")
     cat_encoders = {}
     
     if categorical_cols:
         with tqdm(total=len(categorical_cols), desc="Encoding categorical") as pbar:
             for col in categorical_cols:
-                # Get unique values efficiently
                 unique_vals = set()
                 unique_vals.update(X_train[col].astype(str).unique())
                 if col in X_test.columns:
@@ -97,15 +69,12 @@ def preprocess_ultra_fast(train_df, test_df, valid_df, target_col='class'):
                 
                 unique_list = sorted(list(unique_vals))
                 mapping = {val: idx for idx, val in enumerate(unique_list)}
-                
-                # Apply mapping
                 X_train[col] = X_train[col].astype(str).map(mapping)
                 if col in X_test.columns:
                     X_test[col] = X_test[col].astype(str).map(mapping)
                 if col in X_valid.columns:
                     X_valid[col] = X_valid[col].astype(str).map(mapping)
                 
-                # Store reverse mapping for later use
                 reverse_mapping = {idx: val for val, idx in mapping.items()}
                 cat_encoders[col] = {'mapping': mapping, 'reverse_mapping': reverse_mapping}
                 
@@ -114,7 +83,7 @@ def preprocess_ultra_fast(train_df, test_df, valid_df, target_col='class'):
     scaler = None
 
     preprocessors = {
-        'feature_engineer': None,  # Skip feature engineering
+        'feature_engineer': None,
         'label_encoder': label_encoder,
         'categorical_encoders': cat_encoders,
         'scaler': scaler,

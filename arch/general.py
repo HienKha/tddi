@@ -1,7 +1,3 @@
-"""
-Main script to run TabTransformer training with uncertainty estimation.
-"""
-
 import pandas as pd
 import numpy as np
 import torch
@@ -18,19 +14,17 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from utils import MemoryOptimizer, UncertaintyEstimator
-from models import EnhancedTabTransformerWithImprovements, FocalLoss
+from models import TDDI_Model, FocalLoss
 from preprocessing import load_and_clean_data, preprocess_ultra_fast
 from training import train_single_model
 
 warnings.filterwarnings('ignore')
 
-# Set random seeds
 torch.manual_seed(42)
 np.random.seed(42)
 if torch.cuda.is_available():
     torch.cuda.manual_seed(42)
 
-# Device setup
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"Using device: {device}")
 if torch.cuda.is_available():
@@ -72,8 +66,7 @@ def main(
         patience: Early stopping patience
         output_dir: Directory to save results
     """
-    
-    # Default hyperparameters
+
     if best_params is None:
         best_params = {
             'dim': 64,
@@ -135,7 +128,7 @@ def main(
     print(f"  - Number of classes: {num_classes}")
     
     # Create model wrapper
-    enhanced_model = EnhancedTabTransformerWithImprovements(
+    enhanced_model = TDDI_Model(
         categories=categories,
         num_continuous=num_continuous,
         num_classes=num_classes,
@@ -287,18 +280,17 @@ def main(
         }
         
         results_df = pd.DataFrame([result_dict])
-        results_path = os.path.join(output_dir, f"tabtransformer_results.csv")
+        results_path = os.path.join(output_dir, f"results.csv")
         results_df.to_csv(results_path, index=False)
         print(f"\nResults saved to: {results_path}")
     
     print("\nTraining and evaluation completed!")
     return enhanced_model, test_results
 
-
 if __name__ == "__main__":
     import argparse
     
-    parser = argparse.ArgumentParser(description='Train TabTransformer with uncertainty estimation')
+    parser = argparse.ArgumentParser(description='Train TDDI Model with uncertainty estimation')
     parser.add_argument('--train_path', type=str, required=True,
                         help='Path to training CSV file')
     parser.add_argument('--test_path', type=str, required=True,
