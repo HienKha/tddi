@@ -18,7 +18,6 @@ from sklearn.preprocessing import LabelEncoder
 import sys
 import os
 
-# Add BiSHop to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'BiSHop'))
 
 from models.model import BiSHop

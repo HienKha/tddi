@@ -1,7 +1,3 @@
-"""
-TabTransformer with Uncertainty Estimation
-"""
-
 __version__ = "1.0.0"
 
 from .models import TDDI_Model, FocalLoss
