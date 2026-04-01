@@ -2,24 +2,12 @@
 
 This repository contains a complete implementation of TDDI for drug-drug interaction prediction with uncertainty estimation using ensemble methods.
 
-## Features
-
-- **TDDI Architecture**: State-of-the-art transformer model for tabular data
-- **Uncertainty Estimation**: Ensemble-based uncertainty quantification using:
-  - Entropy uncertainty
-  - Variance uncertainty
-  - Mutual information
-  - Confidence scores
-- **Cross-Validation Training**: Stratified k-fold cross-validation for robust model training
-- **Focal Loss**: Handles class imbalance effectively
-- **Memory Optimization**: Efficient GPU memory management
-
 ## Installation
 
 1. Clone this repository:
 ```bash
-git clone <repository-url>
-cd TDDI_github
+git clone https://github.com/HienKha/tddi.git
+cd tddi
 ```
 
 2. Install dependencies:
@@ -80,53 +68,6 @@ TDDI_github/
 ├── requirements.txt          # Python dependencies
 └── README.md                # This file
 ```
-
-## Key Components
-
-### UncertaintyEstimator
-
-The `UncertaintyEstimator` class provides multiple uncertainty metrics:
-
-- **Entropy Uncertainty**: Measures prediction entropy
-- **Variance Uncertainty**: Measures variance across ensemble predictions
-- **Mutual Information**: Measures epistemic uncertainty
-- **Confidence Scores**: Normalized confidence based on entropy
-
-### TDDI Model
-
-Main model wrapper that:
-- Creates TDDI models
-- Manages ensemble of models
-- Provides uncertainty estimation via `predict_with_uncertainty()`
-
-### Training Pipeline
-
-1. Data loading and preprocessing
-2. Feature encoding (categorical and numerical)
-3. Cross-validation training with early stopping
-4. Ensemble prediction with uncertainty estimation
-5. Results evaluation and saving
-
-## Output
-
-The script generates:
-- **TDDI_results.csv**: Comprehensive results including:
-  - Test accuracy and F1 scores
-  - Cross-validation metrics
-  - Uncertainty statistics
-  - Confidence-based performance metrics
-
-## Model Architecture
-
-Default hyperparameters:
-- Embedding dimension: 64
-- Transformer depth: 3
-- Attention heads: 16
-- Attention dropout: 0.4
-- Feed-forward dropout: 0.2
-- Learning rate: 9.45e-05
-- Batch size: 256
-- Focal loss gamma: 1.0
 
 ## Requirements
 
