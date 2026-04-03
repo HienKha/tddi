@@ -76,10 +76,8 @@ TDDI_github/
 - PyTorch 2.3.1+
 - See `requirements.txt` for full list
 
-## Citation
-
-If you use this code, please cite the original TDDI paper and this implementation.
-
+## Acknowledgement
+Part of the code was borrowed from TabTransformer [Link](https://github.com/lucidrains/tab-transformer-pytorch)
 ## License
 
 [Add your license here]
