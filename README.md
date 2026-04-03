@@ -78,7 +78,3 @@ TDDI_github/
 
 ## Acknowledgement
 Part of the code was borrowed from TabTransformer [[Link]](https://github.com/lucidrains/tab-transformer-pytorch)
-## License
-
-[Add your license here]
-
