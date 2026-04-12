@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from tab_transformer_pytorch import TabTransformer
 from .utils import UncertaintyEstimator
 
+
 class FocalLoss(nn.Module):
     def __init__(self, alpha=None, gamma=2.0, reduction='mean'):
         super(FocalLoss, self).__init__()
