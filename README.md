@@ -62,9 +62,44 @@ mv data_splits/validation_extracted.csv material/validation_extracted.csv
 mv data_splits/test_extracted.csv material/test_extracted.csv
 ```
 
-### Expected CSV format
+### CSV format
 
-Each CSV file contains 3,780 QSAR descriptor columns plus a `label` column (integer 0–177 encoding the DDI type). The files should be placed under `material/`:
+Each file contains the following columns:
+
+**Drug identity columns (6 columns):**
+
+| Column | Description |
+|---|---|
+| `drugid_drug_a` | DrugBank ID of the first drug |
+| `drugid_drug_b` | DrugBank ID of the second drug |
+| `drugname_drug_a` | Generic name of the first drug |
+| `drugname_drug_b` | Generic name of the second drug |
+| `drugsmiles_drug_a` | Canonical SMILES string of the first drug |
+| `drugsmiles_drug_b` | Canonical SMILES string of the second drug |
+
+**QSAR descriptor columns (3,780 columns):**
+
+Computed per drug pair using PyBioMed (PyInteraction module) and RDKit 2017.09.3. The descriptors span seven base families plus their pairwise cross-family interaction terms:
+
+| Family | Full name | Properties captured |
+|---|---|---|
+| `MR_VSA` | Molar Refractivity van der Waals Surface Area | Steric bulk, van der Waals volume |
+| `EState_VSA` | E-state van der Waals Surface Area | Electronic topology |
+| `SlogP_VSA` | Octanol/water partition coefficient-based VSA | Lipophilicity |
+| `LabuteASA` | Labute Atomic Surface Area | Solvent-accessible surface area |
+| `MTPSA` | Molecular Topological Polar Surface Area | Polarity, membrane permeability |
+| `PEOE_VSA` | Partial Equalization of Orbital Electronegativity VSA | Ionization, partial atomic charges |
+| `VSA_EState` | van der Waals Surface Area-based E-state | Electronic-spatial combined |
+
+Cross-family interaction terms (pairwise products of descriptors from distinct families, e.g., `SlogP_VSA × PEOE_VSA`) are also included and account for the majority of the 3,780 total features. These cross-terms capture synergistic relationships between polarity and hydrophobicity at the drug-pair level.
+
+**Target column (1 column):**
+
+| Column | Description |
+|---|---|
+| `label` | Integer 0–177 encoding the DDI type |
+
+The files should be placed under `material/`:
 
 ```
 material/
@@ -83,8 +118,8 @@ python arch/general.py \
     --valid_path material/validation_extracted.csv \
     --test_path material/test_extracted.csv \
     --n_folds 3 \
-    --num_epochs 200 \
-    --patience 50 \
+    --num_epochs 300 \
+    --patience 120 \
     --output_dir results
 ```
 
@@ -178,7 +213,7 @@ The interface includes an adaptive color palette (orange-yellow-blue) optimized 
 
 T-DDI is a TabTransformer-inspired architecture operating exclusively on continuous numerical QSAR descriptors (no categorical inputs):
 
-- **Input:** 3,780 physicochemical descriptors per drug pair, spanning 7 descriptor families: MR_VSA, EState_VSA, SlogP_VSA, LabuteASA, MTPSA, PEOE_VSA, VSA_EState
+- **Input:** 3,780 physicochemical descriptors per drug pair spanning 7 descriptor families (MR_VSA, EState_VSA, SlogP_VSA, LabuteASA, MTPSA, PEOE_VSA, VSA_EState) and their cross-family interaction terms
 - **Architecture:** 3-layer Transformer-style encoder, 16 attention heads, 64-dimensional feature embedding
 - **Parameters:** 87,448,646 (all trainable)
 - **Training:** 3-fold stratified ensemble with focal loss to handle class imbalance
@@ -201,4 +236,4 @@ Interactions using Chemical Descriptors. npj Digital Medicine (under review).
 ## Acknowledgements
 
 Part of the architecture was adapted from TabTransformer:  
-https://github.com/lucidrains/tab-transformer-pytorch .
+https://github.com/lucidrains/tab-transformer-pytorch
