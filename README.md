@@ -111,20 +111,7 @@ material/
 ---
 
 ## Training
-
-```bash
-python arch/general.py \
-    --train_path material/train_extracted.csv \
-    --valid_path material/validation_extracted.csv \
-    --test_path material/test_extracted.csv \
-    --n_folds 3 \
-    --num_epochs 200 \
-    --patience 50 \
-    --output_dir results
-```
-
-To train with feature selection (dropping low-ranked features or at least 6 categorical features [i.e., --num_features_to_drop 6]):
-
+To reproduce the numerical-only T-DDI setting reported in the paper, drop the six metadata/identity columns (`drugid-drug_a`, `drugid-drug_b`, `drugname-drug_a`, `drugname-drug_b`, `drugsmiles-drug_a`, `drugsmiles-drug_b`) before training.
 ```bash
 python arch/general.py \
     --train_path material/train_extracted.csv \
@@ -132,6 +119,9 @@ python arch/general.py \
     --test_path material/test_extracted.csv \
     --feature_list_path material/list_of_all_features_ascending_order.txt \
     --num_features_to_drop 6 \
+    --n_folds 3 \
+    --num_epochs 200 \
+    --patience 50 \
     --output_dir results
 ```
 
@@ -199,7 +189,7 @@ The interface includes an adaptive color palette (orange-yellow-blue) optimized 
 T-DDI is a TabTransformer-inspired architecture operating exclusively on continuous numerical QSAR descriptors (no categorical inputs):
 
 - **Input:** 3,780 physicochemical descriptors per drug pair spanning 7 descriptor families (MR_VSA, EState_VSA, SlogP_VSA, LabuteASA, MTPSA, PEOE_VSA, VSA_EState) and their cross-family interaction terms
-- **Architecture:** 3-layer Transformer-style encoder, 16 attention heads, 64-dimensional feature embedding
+- **Architecture:** TabTransformer-inspired numerical branch: layer normalization over 3,780 continuous QSAR descriptors followed by the TabTransformer MLP prediction head. The categorical embedding and self-attention branch is inactive in the final numerical-only T-DDI configuration.
 - **Parameters:** 87,448,646 (all trainable)
 - **Training:** 3-fold stratified ensemble with focal loss to handle class imbalance
 - **Uncertainty:** Entropy, variance, and mutual information aggregated across ensemble members, normalized to a [0,1] confidence score
