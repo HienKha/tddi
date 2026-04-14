@@ -97,7 +97,7 @@ Cross-family interaction terms (pairwise products of descriptors from distinct f
 
 | Column | Description |
 |---|---|
-| `label` | Integer 0–177 encoding the DDI type |
+| `class` | Integer 0–177 encoding the DDI type |
 
 The files should be placed under `material/`:
 
@@ -118,12 +118,12 @@ python arch/general.py \
     --valid_path material/validation_extracted.csv \
     --test_path material/test_extracted.csv \
     --n_folds 3 \
-    --num_epochs 300 \
-    --patience 120 \
+    --num_epochs 200 \
+    --patience 50 \
     --output_dir results
 ```
 
-To train with feature selection (dropping low-ranked features):
+To train with feature selection (dropping low-ranked features or at least 6 categorical features [i.e., --num_features_to_drop 6]):
 
 ```bash
 python arch/general.py \
@@ -135,21 +135,6 @@ python arch/general.py \
     --output_dir results
 ```
 
-### CLI Arguments
-
-| Argument | Required | Default | Description |
-|---|---|---|---|
-| `--train_path` | ✅ | — | Path to training CSV |
-| `--valid_path` | ✅ | — | Path to validation CSV |
-| `--test_path` | ✅ | — | Path to test CSV |
-| `--feature_list_path` | ❌ | None | Text file of feature names (one per line) |
-| `--num_features_to_drop` | ❌ | 0 | Number of features to drop from the list |
-| `--n_folds` | ❌ | 3 | Number of stratified CV folds |
-| `--num_epochs` | ❌ | 300 | Max training epochs per fold |
-| `--patience` | ❌ | 120 | Early stopping patience |
-| `--output_dir` | ❌ | results | Output directory for results |
-
----
 
 ## Project Structure
 
@@ -189,7 +174,7 @@ The output includes:
 - LIME feature importance plot (if enabled)
 - Natural language explanation (if enabled)
 
-Average processing time is approximately 7–8 seconds per pair for model prediction with LIME explanation, and approximately 24 seconds per pair when the AI interpretation module is enabled.
+Average processing time is approximately 0.015ms to 1 second per pair (depending on using cuda/cpu or network stability) for model prediction without LIME/AI interpretation. Average processing time is approximately 7–8 seconds per pair for model prediction with LIME explanation, and approximately 24 seconds per pair when the AI interpretation module is enabled.
 
 ### Multiple Pair Prediction
 1. Go to the **Multiple Pair** tab
@@ -218,7 +203,7 @@ T-DDI is a TabTransformer-inspired architecture operating exclusively on continu
 - **Parameters:** 87,448,646 (all trainable)
 - **Training:** 3-fold stratified ensemble with focal loss to handle class imbalance
 - **Uncertainty:** Entropy, variance, and mutual information aggregated across ensemble members, normalized to a [0,1] confidence score
-- **Hardware:** Trained on NVIDIA RTX 4090 (24 GB VRAM); inference ~0.0151 ms per drug pair
+- **Hardware:** Trained on NVIDIA RTX 4090 (24 GB VRAM); inference ~0.0151 ms per drug pair (on cuda)
 
 ---
 
