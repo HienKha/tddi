@@ -201,4 +201,4 @@ Interactions using Chemical Descriptors. npj Digital Medicine (under review).
 ## Acknowledgements
 
 Part of the architecture was adapted from TabTransformer:  
-https://github.com/lucidrains/tab-transformer-pytorch
+https://github.com/lucidrains/tab-transformer-pytorch .
