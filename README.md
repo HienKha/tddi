@@ -40,20 +40,37 @@ The DDI2025 dataset (868,069 drug pairs, 178 interaction types, 3,780 QSAR descr
 
 **https://doi.org/10.5281/zenodo.17923583**
 
-The dataset is split into:
-- Training: 60% (520,841 pairs)
-- Validation: 20% (173,614 pairs)
-- Test: 20% (173,614 pairs)
+Download and extract the dataset:
+
+```bash
+unzip data_splits.zip
+```
+
+The archive contains the following files under `data_splits/`:
+
+| File | Size | Pairs |
+|---|---|---|
+| `train_extracted.csv` | 10.1 GB | 520,841 (60%) |
+| `validation_extracted.csv` | 3.4 GB | 173,614 (20%) |
+| `test_extracted.csv` | 3.4 GB | 173,614 (20%) |
+
+Move the files into `material/` before training:
+
+```bash
+mv data_splits/train_extracted.csv material/train_extracted.csv
+mv data_splits/validation_extracted.csv material/validation_extracted.csv
+mv data_splits/test_extracted.csv material/test_extracted.csv
+```
 
 ### Expected CSV format
 
-Each CSV file should contain 3,780 QSAR descriptor columns plus a `label` column (integer 0–177 encoding the DDI type). Place the files under `material/`:
+Each CSV file contains 3,780 QSAR descriptor columns plus a `label` column (integer 0–177 encoding the DDI type). The files should be placed under `material/`:
 
 ```
 material/
-├── train.csv
-├── valid.csv
-└── test.csv
+├── train_extracted.csv
+├── validation_extracted.csv
+└── test_extracted.csv
 ```
 
 ---
@@ -62,9 +79,9 @@ material/
 
 ```bash
 python arch/general.py \
-    --train_path material/train.csv \
-    --valid_path material/valid.csv \
-    --test_path material/test.csv \
+    --train_path material/train_extracted.csv \
+    --valid_path material/validation_extracted.csv \
+    --test_path material/test_extracted.csv \
     --n_folds 3 \
     --num_epochs 300 \
     --patience 120 \
@@ -75,9 +92,9 @@ To train with feature selection (dropping low-ranked features):
 
 ```bash
 python arch/general.py \
-    --train_path material/train.csv \
-    --valid_path material/valid.csv \
-    --test_path material/test.csv \
+    --train_path material/train_extracted.csv \
+    --valid_path material/validation_extracted.csv \
+    --test_path material/test_extracted.csv \
     --feature_list_path material/list_of_all_features_ascending_order.txt \
     --num_features_to_drop 6 \
     --output_dir results
