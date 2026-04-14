@@ -21,8 +21,6 @@ A descriptor-based deep learning framework for multi-class drug-drug interaction
 
 ### DDI2018 benchmark (77 classes, updated DrugBank preprocessing)
 
-T-DDI outperforms all compared DDI-specific baselines on the updated DDI2018 split:
-
 | Model | Accuracy | Macro F1 |
 |---|---|---|
 | DDI-GCN | 0.7118 | 0.3600 |
@@ -53,7 +51,7 @@ To assess generalization to unseen compounds, T-DDI was evaluated on five novel 
 - **Ziftomenib + Famotidine** (weak base + gastric acid suppressor): predicted with *P* = 0.39, mechanistically consistent with pH-dependent absorption reduction.
 - **Remibrutinib + Rifampin**: correctly flagged as interaction but directionality of exposure change was inverted, highlighting a known limitation with strong induction scenarios.
 
-Full predicted DDI tables for all five drugs are provided in Supplementary Document S4.
+Full predicted DDI tables for all five drugs are provided in Supplementary Document S1.
 
 ---
 
