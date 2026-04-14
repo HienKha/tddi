@@ -83,8 +83,8 @@ python arch/general.py \
     --valid_path material/validation_extracted.csv \
     --test_path material/test_extracted.csv \
     --n_folds 3 \
-    --num_epochs 300 \
-    --patience 120 \
+    --num_epochs 200 \
+    --patience 50 \
     --output_dir results
 ```
 
