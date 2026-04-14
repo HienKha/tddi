@@ -4,18 +4,82 @@
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
 [![Web App](https://img.shields.io/badge/Web_App-Live-green)](https://projectxddi-tddi-docker.hf.space/)
 
-A descriptor-based deep learning framework for multi-class drug-drug interaction (DDI) prediction with uncertainty-aware estimation. T-DDI uses explicit physicochemical descriptors from molecular SMILES and an ensemble-based uncertainty estimator to handle severe class imbalance across 178 DDI types.
+A descriptor-based deep learning framework for multi-class drug-drug interaction (DDI) prediction with uncertainty-aware estimation. T-DDI uses explicit physicochemical descriptors from molecular SMILES and an ensemble-based uncertainty estimator to handle severe class imbalance across 179 DDI types.
 
 **Live demo:** https://projectxddi-tddi-docker.hf.space/
 
 ---
 
-## Key Results (DDI2025 test set)
+## Key Results
+
+### DDI2025 test set (178 classes, 868,069 drug pairs)
 
 | Setting | Accuracy | Macro F1 |
 |---|---|---|
 | T-DDI (full test set) | 0.9434 | 0.8452 |
-| T-DDI with UE (high-confidence subset, 95.62% of samples) | 0.9661 | 0.8843 |
+| T-DDI with UE (high-confidence subset, 95.62% of samples, threshold = 0.86) | 0.9661 | 0.8843 |
+
+### DDI2018 benchmark (77 classes, updated DrugBank preprocessing)
+
+T-DDI outperforms all compared DDI-specific baselines on the updated DDI2018 split:
+
+| Model | Accuracy | Macro F1 |
+|---|---|---|
+| DDI-GCN | 0.7118 | 0.3600 |
+| SSI-DDI | 0.8610 | 0.8609 |
+| DeepDDI | 0.9228 | 0.7048 |
+| **T-DDI without UE** | **0.9296** | **0.8990** |
+| **T-DDI with UE** (threshold = 0.90) | **0.9774** | **0.9398** |
+
+> The DDI2018 split uses the same DrugBank preprocessing pipeline as DDI2025, updated to v5.1.12. The original 86 interaction types reduce to 77 after removing multi-adverse-event entries and rare classes.
+
+---
+
+## Prospective Validation on FDA-Approved Drugs (2025)
+
+To assess generalization to unseen compounds, T-DDI was evaluated on five novel small-molecule drugs approved by the FDA between May and November 2025 — **none of which were present in the training set**:
+
+| Drug | Brand name | Approval | Indication |
+|---|---|---|---|
+| Imlunestrant | Inluriyo | Sep 2025 | ER⁺/HER2⁻ breast cancer (SERD) |
+| Remibrutinib | Rhapsido | Sep 2025 | Chronic spontaneous urticaria (BTK inhibitor) |
+| Elinzanetant | Lynkuet | Oct 2025 | Menopausal vasomotor symptoms (NK1,3 antagonist) |
+| Ziftomenib | Komzifti | Nov 2025 | NPM1-mutated AML (menin-KMT2A inhibitor) |
+| Sevabertinib | Hyrnuo | Nov 2025 | Non-small cell lung cancer (HER2 TKI) |
+
+**Representative results:**
+- **Imlunestrant + Itraconazole** (CYP3A4 substrate + inhibitor): predicted with *P* > 0.99, consistent with clinical dose-modification guidelines.
+- **Elinzanetant + Alprazolam** (NK antagonist + benzodiazepine): predicted with *P* ≈ 1.0, reflecting pharmacodynamic CNS depression synergy.
+- **Ziftomenib + Famotidine** (weak base + gastric acid suppressor): predicted with *P* = 0.39, mechanistically consistent with pH-dependent absorption reduction.
+- **Remibrutinib + Rifampin**: correctly flagged as interaction but directionality of exposure change was inverted, highlighting a known limitation with strong induction scenarios.
+
+Full predicted DDI tables for all five drugs are provided in Supplementary Document S4.
+
+---
+
+## Error Analysis and Global Explainability (LIME)
+
+### Error analysis
+
+Mispredictions (*N* = 9,830 errors on the DDI2025 test set) are systematic rather than random:
+- **87.29%** of errors involve predicting a label from a *different* semantic group (cross-domain leakage).
+- **12.71%** are near-misses within the correct semantic group.
+- The dominant error pattern is **bidirectional confusion between "Metabolism" and "Serum concentration"** classes, reflecting the model's difficulty in separating an enzymatic mechanism from its downstream outcome.
+- A secondary pattern involves PD events (e.g., cardiovascular or CNS depression) being misclassified as PK events.
+
+### Global LIME explanation
+
+To quantify global feature importance, LIME was applied to a **stratified random sample of 9,463 test instances** spanning all 178 interaction classes (up to 100 per class):
+
+- **Cross-family interaction terms** (pairwise products of descriptors from distinct families, e.g., `SlogP_VSA × PEOE_VSA`) account for **77.6%** of top-30 LIME contributions and achieve the highest mean absolute weight across all semantic groups (mean |ŵ| = 0.060).
+- The single highest-ranked feature globally is `slogPVSA10 × PEOEVSA3` (mean |ŵ| = 0.276), capturing the interplay between lipophilicity-weighted surface area and partial atomic charges.
+- **Pharmacokinetic metabolism groups** rely more heavily on `SlogP_VSA` and `MR_VSA` descriptors, consistent with the role of lipophilicity and van der Waals volume in CYP450 affinity.
+- **Seizure-related groups** show the highest `MTPSA` contribution, reflecting the low polar surface area requirement for CNS penetration.
+- **Diuretic/renal groups** exhibit elevated `PEOE_VSA` weights, consistent with ionization state importance in renal tubular secretion.
+
+Kruskal–Wallis tests confirmed statistically significant differentiation for Cross-term (*H* = 89.0, *p* < 0.001), MR_VSA (*H* = 27.0, *p* < 0.001), and SlogP_VSA (*H* = 10.0, *p* = 0.019) across broad DDI mechanism categories (PK, PD, clinical-outcome).
+
+Global feature importance heatmaps across 30 semantic DDI groups are provided in Supplementary Document S8.
 
 ---
 
