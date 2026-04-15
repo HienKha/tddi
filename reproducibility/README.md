@@ -3,6 +3,13 @@
 This directory contains the lightweight artifacts needed to audit the confidence
 thresholds reported in the T-DDI manuscript.
 
+The larger prediction CSVs and pretrained DDI2025 model checkpoints are
+archived on Zenodo:
+
+```text
+https://doi.org/10.5281/zenodo.19588891
+```
+
 ## DDI2025 Confidence Threshold
 
 The final DDI2025 high-confidence threshold is `t_high = 0.88`; the lower
@@ -46,15 +53,15 @@ Low:    confidence < t_low
 
 ## Recompute From Predictions
 
-If `oof_predictions_full3780_new_submit.csv` and
-`test_predictions_full3780_new_submit_threshold.csv` are available locally:
+If the Zenodo model artifact archive has been downloaded and extracted locally:
 
 ```bash
 python reproducibility/select_confidence_threshold.py \
-    --oof_predictions best_model_and_results/full3780_new_submit_oof_threshold/oof_predictions_full3780_new_submit.csv \
-    --test_predictions best_model_and_results/full3780_new_submit_oof_threshold/test_predictions_full3780_new_submit_threshold.csv \
+    --oof_predictions path/to/tddi_ddi2025_model_artifacts_2026-04-15/threshold_artifacts/oof_predictions_full3780_new_submit.csv \
+    --test_predictions path/to/tddi_ddi2025_model_artifacts_2026-04-15/threshold_artifacts/test_predictions_full3780_new_submit_threshold.csv \
     --out_dir reproducibility/ddi2025
 ```
 
 The prediction CSVs are not committed here because they are generated outputs
-from the full training and evaluation pipeline.
+from the full training and evaluation pipeline. The expected selected threshold
+is `t_high = 0.88`.

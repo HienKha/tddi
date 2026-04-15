@@ -68,12 +68,12 @@ mv data_splits/test_extracted.csv material/test_extracted.csv
 
 | Column | Description |
 |---|---|
-| `drugid_drug_a` | DrugBank ID of the first drug |
-| `drugid_drug_b` | DrugBank ID of the second drug |
-| `drugname_drug_a` | Generic name of the first drug |
-| `drugname_drug_b` | Generic name of the second drug |
-| `drugsmiles_drug_a` | Canonical SMILES string of the first drug |
-| `drugsmiles_drug_b` | Canonical SMILES string of the second drug |
+| `drugid-drug_a` | DrugBank ID of the first drug |
+| `drugid-drug_b` | DrugBank ID of the second drug |
+| `drugname-drug_a` | Generic name of the first drug |
+| `drugname-drug_b` | Generic name of the second drug |
+| `drugsmiles-drug_a` | Canonical SMILES string of the first drug |
+| `drugsmiles-drug_b` | Canonical SMILES string of the second drug |
 
 **QSAR descriptor columns (3,780 columns):**
 
@@ -131,6 +131,9 @@ The DDI2025 pretrained model and confidence-threshold artifacts are available on
 
 The archive contains the final 3-fold ensemble checkpoint, individual fold checkpoints, the OOF prediction CSV used for threshold selection, held-out test predictions, feature schema, label mapping, and checksum manifest.
 
+After downloading and extracting the model archive, the prediction artifacts used
+for threshold reproduction are under `threshold_artifacts/`.
+
 ---
 
 ## Training
@@ -158,12 +161,12 @@ The DDI2025 OOF threshold selection can be recomputed from OOF prediction CSVs w
 
 ```bash
 python reproducibility/select_confidence_threshold.py \
-    --oof_predictions best_model_and_results/full3780_new_submit_oof_threshold/oof_predictions_full3780_new_submit.csv \
-    --test_predictions best_model_and_results/full3780_new_submit_oof_threshold/test_predictions_full3780_new_submit_threshold.csv \
+    --oof_predictions path/to/tddi_ddi2025_model_artifacts_2026-04-15/threshold_artifacts/oof_predictions_full3780_new_submit.csv \
+    --test_predictions path/to/tddi_ddi2025_model_artifacts_2026-04-15/threshold_artifacts/test_predictions_full3780_new_submit_threshold.csv \
     --out_dir reproducibility/ddi2025
 ```
 
-The script selects the smallest threshold in `[0.50, 0.99]` that reaches at least 95% OOF accuracy, then applies the frozen threshold to the held-out test predictions.
+The script selects the smallest threshold in `[0.50, 0.99]` that reaches at least 95% OOF accuracy, then applies the frozen threshold to the held-out test predictions. The expected selected threshold is `t_high = 0.88`.
 
 ---
 
