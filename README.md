@@ -155,7 +155,7 @@ the manuscript high-confidence subset metrics:
 ---
 
 ## Training
-To reproduce the numerical-only T-DDI setting reported in the paper, drop the six metadata/identity columns (`drugid-drug_a`, `drugid-drug_b`, `drugname-drug_a`, `drugname-drug_b`, `drugsmiles-drug_a`, `drugsmiles-drug_b`) before training.
+To replicate the numerical-only T-DDI configuration described in the paper and ensure its feasibility for production, we established the number of epochs at 200 and patience at 50, drop the six metadata/identity columns (`drugid-drug_a`, `drugid-drug_b`, `drugname-drug_a`, `drugname-drug_b`, `drugsmiles-drug_a`, `drugsmiles-drug_b`) before training.
 ```bash
 python arch/general.py \
     --train_path material/train_extracted.csv \
@@ -210,7 +210,7 @@ tddi/
 
 This public repository contains the training, evaluation, and reproducibility
 code for the manuscript. The web application is a deployed demo built around
-the same model artifacts.
+the same model artifacts. This web application allows users to predict drug-drug interactions (DDI) between two medications for analytical purposes.
 
 No installation needed. The web app is available at:  
 **https://projectxddi-tddi-docker.hf.space/**
@@ -253,7 +253,7 @@ The interface includes an adaptive color palette (orange-yellow-blue) optimized 
 T-DDI is a TabTransformer-inspired architecture operating exclusively on continuous numerical QSAR descriptors (no categorical inputs):
 
 - **Input:** 3,780 physicochemical descriptors per drug pair spanning 7 descriptor families (MR_VSA, EState_VSA, SlogP_VSA, LabuteASA, MTPSA, PEOE_VSA, VSA_EState) and their cross-family interaction terms
-- **Architecture:** TabTransformer-inspired numerical branch: layer normalization over 3,780 continuous QSAR descriptors followed by the TabTransformer MLP prediction head. The categorical embedding and self-attention branch is inactive in the final numerical-only T-DDI configuration.
+- **Architecture:** TabTransformer-inspired numerical branch: layer normalization over 3,780 continuous QSAR descriptors followed by the TabTransformer MLP prediction head. The categorical embedding and self-attention branch is inactive in the final numerical-only T-DDI configuration. We exclusively employ the numerical branch for inference due to the large parameters in the ensemble model.
 - **Parameters:** 87,448,646 (all trainable)
 - **Training:** 3-fold stratified ensemble with unweighted focal loss (`gamma=1.0`) to emphasize hard examples under class imbalance
 - **Uncertainty:** Entropy, variance, and mutual information aggregated across ensemble members, normalized to a [0,1] confidence score
