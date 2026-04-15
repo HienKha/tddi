@@ -221,7 +221,7 @@ T-DDI is a TabTransformer-inspired architecture operating exclusively on continu
 If you use T-DDI in your research, please cite:
 
 ```
-Kha, Q.-H., Nguyen, D.-Q.-A., et al. T-DDI: Robust Prediction of Drug
+Kha, Q.-H., Nguyen, D.-Q.-A., Pham, V.-H.-P., Huynh, K.-M.-U. et al. T-DDI: Robust Prediction of Drug
 Interactions using Chemical Descriptors. npj Digital Medicine (under review).
 ```
 
