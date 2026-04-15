@@ -7,7 +7,8 @@ from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import StratifiedKFold
 import warnings
 import os
-from typing import Dict, List, Optional
+import json
+from typing import Dict, List, Optional, Tuple
 
 import sys
 import os
@@ -39,6 +40,70 @@ def load_feature_list(feature_list_path: str) -> List[str]:
     return columns_to_drop
 
 
+def load_thresholds(
+    threshold_json: Optional[str],
+    t_high: float,
+    t_low: float
+) -> Tuple[float, float, str]:
+    """Load frozen confidence thresholds, if a JSON artifact is provided."""
+    if not threshold_json:
+        return t_high, t_low, "command-line/default arguments"
+
+    with open(threshold_json, "r", encoding="utf-8") as f:
+        payload = json.load(f)
+
+    loaded_t_high = payload.get("t_high", payload.get("selected_threshold", t_high))
+    loaded_t_low = payload.get("t_low", t_low)
+    return float(loaded_t_high), float(loaded_t_low), threshold_json
+
+
+def classification_metrics(y_true, y_pred) -> Dict[str, float]:
+    """Return the metric set used in the manuscript tables."""
+    report = classification_report(y_true, y_pred, output_dict=True, zero_division=0)
+    accuracy = accuracy_score(y_true, y_pred)
+    return {
+        "accuracy": accuracy,
+        "micro_precision": accuracy,
+        "micro_recall": accuracy,
+        "micro_f1": accuracy,
+        "weighted_precision": report["weighted avg"]["precision"],
+        "weighted_recall": report["weighted avg"]["recall"],
+        "weighted_f1": report["weighted avg"]["f1-score"],
+        "macro_precision": report["macro avg"]["precision"],
+        "macro_recall": report["macro avg"]["recall"],
+        "macro_f1": report["macro avg"]["f1-score"],
+    }
+
+
+def confidence_stratum_metrics(name: str, mask, y_true, y_pred) -> Dict[str, float]:
+    """Compute metrics for one confidence stratum."""
+    n_total = len(y_true)
+    n_subset = int(np.sum(mask))
+    result = {
+        "group": name,
+        "n": n_subset,
+        "coverage": n_subset / n_total if n_total else 0.0,
+        "true_class_count": int(len(np.unique(y_true[mask]))) if n_subset else 0,
+    }
+    if n_subset == 0:
+        result.update({
+            "accuracy": np.nan,
+            "micro_precision": np.nan,
+            "micro_recall": np.nan,
+            "micro_f1": np.nan,
+            "weighted_precision": np.nan,
+            "weighted_recall": np.nan,
+            "weighted_f1": np.nan,
+            "macro_precision": np.nan,
+            "macro_recall": np.nan,
+            "macro_f1": np.nan,
+        })
+        return result
+
+    result.update(classification_metrics(y_true[mask], y_pred[mask]))
+    return result
+
+
 def main(
     train_path: str,
     test_path: str,
@@ -46,9 +111,12 @@ def main(
     feature_list_path: Optional[str] = None,
     number_of_features_to_drop: int = 0,
     best_params: Optional[Dict] = None,
+    threshold_json: Optional[str] = None,
+    t_high: float = 0.88,
+    t_low: float = 0.50,
     n_folds: int = 3,
-    num_epochs: int = 300,
-    patience: int = 120,
+    num_epochs: int = 200,
+    patience: int = 50,
     output_dir: str = "results"
 ):
     """
@@ -61,11 +129,18 @@ def main(
         feature_list_path: Path to file with features to drop (optional)
         number_of_features_to_drop: Number of features to drop from the list
         best_params: Dictionary of hyperparameters
+        threshold_json: JSON artifact containing frozen t_high and t_low values
+        t_high: High-confidence threshold selected from OOF development predictions
+        t_low: Lower confidence boundary fixed a priori
         n_folds: Number of cross-validation folds
         num_epochs: Maximum training epochs
         patience: Early stopping patience
         output_dir: Directory to save results
     """
+
+    t_high, t_low, threshold_source = load_thresholds(threshold_json, t_high, t_low)
+    print(f"Confidence thresholds: t_high={t_high:.2f}, t_low={t_low:.2f}")
+    print(f"Threshold source: {threshold_source}")
 
     if best_params is None:
         best_params = {
@@ -217,13 +292,13 @@ def main(
         print(f"{'='*40}")
         print(f"Test Accuracy: {test_accuracy:.4f}")
         
-        cls_report = classification_report(y_test, predictions, output_dict=True)
-        f1_macro = cls_report['macro avg']['f1-score']
-        f1_weighted = cls_report['weighted avg']['f1-score']
-        precision_macro = cls_report['macro avg']['precision']
-        precision_weighted = cls_report['weighted avg']['precision']
-        recall_macro = cls_report['macro avg']['recall']
-        recall_weighted = cls_report['weighted avg']['recall']
+        full_metrics = classification_metrics(y_test, predictions)
+        f1_macro = full_metrics['macro_f1']
+        f1_weighted = full_metrics['weighted_f1']
+        precision_macro = full_metrics['macro_precision']
+        precision_weighted = full_metrics['weighted_precision']
+        recall_macro = full_metrics['macro_recall']
+        recall_weighted = full_metrics['weighted_recall']
         
         print(f"F1 Macro: {f1_macro:.4f}")
         print(f"F1 Weighted: {f1_weighted:.4f}")
@@ -235,14 +310,14 @@ def main(
         print(f"Mean Variance: {np.mean(uncertainties['variance']):.4f}")
         
         confidence_scores = uncertainties['confidence']
-        high_conf_mask = confidence_scores > 0.8
-        medium_conf_mask = (confidence_scores >= 0.5) & (confidence_scores <= 0.8)
-        low_conf_mask = confidence_scores < 0.5
+        high_conf_mask = confidence_scores >= t_high
+        medium_conf_mask = (confidence_scores >= t_low) & (confidence_scores < t_high)
+        low_conf_mask = confidence_scores < t_low
         
         print(f"\nConfidence Distribution:")
-        print(f"High confidence (>0.8): {np.sum(high_conf_mask):,} ({np.mean(high_conf_mask)*100:.1f}%)")
-        print(f"Medium confidence (0.5-0.8): {np.sum(medium_conf_mask):,} ({np.mean(medium_conf_mask)*100:.1f}%)")
-        print(f"Low confidence (<0.5): {np.sum(low_conf_mask):,} ({np.mean(low_conf_mask)*100:.1f}%)")
+        print(f"High confidence (>={t_high:.2f}): {np.sum(high_conf_mask):,} ({np.mean(high_conf_mask)*100:.1f}%)")
+        print(f"Medium confidence [{t_low:.2f}, {t_high:.2f}): {np.sum(medium_conf_mask):,} ({np.mean(medium_conf_mask)*100:.1f}%)")
+        print(f"Low confidence (<{t_low:.2f}): {np.sum(low_conf_mask):,} ({np.mean(low_conf_mask)*100:.1f}%)")
         
         # Accuracy by confidence level
         y_test_np = np.asarray(y_test)
@@ -259,6 +334,12 @@ def main(
         if low_conf_mask.sum() > 0:
             low_conf_acc = accuracy_score(y_test_np[low_conf_mask], preds_np[low_conf_mask])
             print(f"Low confidence accuracy: {low_conf_acc:.4f}")
+
+        strata_rows = [
+            confidence_stratum_metrics("high", high_conf_mask, y_test_np, preds_np),
+            confidence_stratum_metrics("medium", medium_conf_mask, y_test_np, preds_np),
+            confidence_stratum_metrics("low", low_conf_mask, y_test_np, preds_np),
+        ]
         
         # Save results
         os.makedirs(output_dir, exist_ok=True)
@@ -266,6 +347,9 @@ def main(
             'num_features_dropped': number_of_features_to_drop,
             'num_classes': num_classes,
             'test_accuracy': test_accuracy,
+            'micro_precision': full_metrics['micro_precision'],
+            'micro_recall': full_metrics['micro_recall'],
+            'micro_f1': full_metrics['micro_f1'],
             'f1_macro': f1_macro,
             'f1_weighted': f1_weighted,
             'precision_macro': precision_macro,
@@ -277,12 +361,29 @@ def main(
             'mean_entropy': np.mean(uncertainties['entropy']),
             'mean_confidence': np.mean(uncertainties['confidence']),
             'mean_variance': np.mean(uncertainties['variance']),
+            't_high': t_high,
+            't_low': t_low,
+            'threshold_source': threshold_source,
         }
         
         results_df = pd.DataFrame([result_dict])
         results_path = os.path.join(output_dir, f"results.csv")
         results_df.to_csv(results_path, index=False)
         print(f"\nResults saved to: {results_path}")
+
+        strata_path = os.path.join(output_dir, "confidence_strata_metrics.csv")
+        pd.DataFrame(strata_rows).to_csv(strata_path, index=False)
+        print(f"Confidence strata metrics saved to: {strata_path}")
+
+        thresholds_path = os.path.join(output_dir, "thresholds_used.json")
+        with open(thresholds_path, "w", encoding="utf-8") as f:
+            json.dump({
+                "t_high": t_high,
+                "t_low": t_low,
+                "threshold_source": threshold_source,
+                "tier_rule": "high: confidence >= t_high; medium: t_low <= confidence < t_high; low: confidence < t_low",
+            }, f, indent=2)
+        print(f"Threshold metadata saved to: {thresholds_path}")
     
     print("\nTraining and evaluation completed!")
     return enhanced_model, test_results
@@ -301,11 +402,17 @@ if __name__ == "__main__":
                         help='Path to file with features to drop')
     parser.add_argument('--num_features_to_drop', type=int, default=0,
                         help='Number of features to drop')
+    parser.add_argument('--threshold_json', type=str, default=None,
+                        help='Path to JSON file with frozen t_high and t_low thresholds')
+    parser.add_argument('--t_high', type=float, default=0.88,
+                        help='High-confidence threshold selected from OOF development predictions')
+    parser.add_argument('--t_low', type=float, default=0.50,
+                        help='Lower confidence boundary')
     parser.add_argument('--n_folds', type=int, default=3,
                         help='Number of CV folds')
-    parser.add_argument('--num_epochs', type=int, default=300,
+    parser.add_argument('--num_epochs', type=int, default=200,
                         help='Maximum training epochs')
-    parser.add_argument('--patience', type=int, default=120,
+    parser.add_argument('--patience', type=int, default=50,
                         help='Early stopping patience')
     parser.add_argument('--output_dir', type=str, default='results',
                         help='Output directory for results')
@@ -318,9 +425,11 @@ if __name__ == "__main__":
         valid_path=args.valid_path,
         feature_list_path=args.feature_list_path,
         number_of_features_to_drop=args.num_features_to_drop,
+        threshold_json=args.threshold_json,
+        t_high=args.t_high,
+        t_low=args.t_low,
         n_folds=args.n_folds,
         num_epochs=args.num_epochs,
         patience=args.patience,
         output_dir=args.output_dir
     )
-

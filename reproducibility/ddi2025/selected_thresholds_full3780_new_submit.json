@@ -1,0 +1,51 @@
+{
+  "model_pickle": "best_model_and_results/full3780_new_submit.pkl",
+  "train_path": "data_splits/train_extracted.csv",
+  "validation_path": "data_splits/validation_extracted.csv",
+  "test_path": "data_splits/test_extracted.csv",
+  "feature_drop_path": "material/list_of_all_features_ascending_order.txt",
+  "n_features_dropped": 6,
+  "columns_dropped": [
+    "drugsmiles-drug_a",
+    "drugsmiles-drug_b",
+    "drugid-drug_a",
+    "drugid-drug_b",
+    "drugname-drug_a",
+    "drugname-drug_b"
+  ],
+  "n_splits": 3,
+  "random_state": 42,
+  "target_oof_accuracy": 0.95,
+  "selection_rule": "smallest threshold with OOF accuracy >= 0.95",
+  "t_high": 0.88,
+  "t_low": 0.5,
+  "tier_rule": "high: confidence >= t_high; medium: t_low <= confidence < t_high; low: confidence < t_low",
+  "baseline_oof_metrics": {
+    "n": 694455,
+    "accuracy": 0.9246459453816303,
+    "micro_precision": 0.9246459453816303,
+    "micro_recall": 0.9246459453816303,
+    "micro_f1": 0.9246459453816303,
+    "weighted_precision": 0.9243966651453343,
+    "weighted_recall": 0.9246459453816303,
+    "weighted_f1": 0.9243129173788501,
+    "macro_precision": 0.8769575534421906,
+    "macro_recall": 0.7879464440398037,
+    "macro_f1": 0.8212370874281097
+  },
+  "selected_row": {
+    "threshold": 0.88,
+    "n_high": 641133.0,
+    "coverage": 0.9232174870941962,
+    "accuracy": 0.9539565113634768,
+    "micro_precision": 0.9539565113634768,
+    "micro_recall": 0.9539565113634768,
+    "micro_f1": 0.9539565113634768,
+    "weighted_precision": 0.9537616509258442,
+    "weighted_recall": 0.9539565113634768,
+    "weighted_f1": 0.9537468188771785,
+    "macro_precision": 0.8926211425144895,
+    "macro_recall": 0.8250736782655318,
+    "macro_f1": 0.8515662361097993
+  }
+}

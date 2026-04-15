@@ -1,0 +1,70 @@
+{
+  "model_pickle": "best_model_and_results/full3780_new_submit.pkl",
+  "threshold_source": "reproducibility/ddi2025/selected_thresholds_full3780_new_submit.json",
+  "t_high": 0.88,
+  "t_low": 0.5,
+  "full_test_metrics": {
+    "n": 173614,
+    "accuracy": 0.9433801421544346,
+    "micro_precision": 0.9433801421544346,
+    "micro_recall": 0.9433801421544346,
+    "micro_f1": 0.9433801421544346,
+    "weighted_precision": 0.9431872357545463,
+    "weighted_recall": 0.9433801421544346,
+    "weighted_f1": 0.9430496999671802,
+    "macro_precision": 0.9022865290495288,
+    "macro_recall": 0.8184759672292942,
+    "macro_f1": 0.8452270844266038
+  },
+  "confidence_strata": [
+    {
+      "group": "high",
+      "n": 152622,
+      "coverage": 0.8790880919741495,
+      "true_class_count": 171,
+      "accuracy": 0.9796294112251183,
+      "micro_precision": 0.9796294112251183,
+      "micro_recall": 0.9796294112251183,
+      "micro_f1": 0.9796294112251183,
+      "weighted_precision": 0.9795369318044422,
+      "weighted_recall": 0.9796294112251183,
+      "weighted_f1": 0.9794479340070072,
+      "macro_precision": 0.924923014510555,
+      "macro_recall": 0.8868931821690929,
+      "macro_f1": 0.8991673461705545
+    },
+    {
+      "group": "medium",
+      "n": 20992,
+      "coverage": 0.12091190802585045,
+      "true_class_count": 160,
+      "accuracy": 0.6798304115853658,
+      "micro_precision": 0.6798304115853658,
+      "micro_recall": 0.6798304115853658,
+      "micro_f1": 0.6798304115853658,
+      "weighted_precision": 0.6837146875251138,
+      "weighted_recall": 0.6798304115853658,
+      "weighted_f1": 0.6798174450722277,
+      "macro_precision": 0.6608345643348248,
+      "macro_recall": 0.6099452800031849,
+      "macro_f1": 0.614494743090733
+    },
+    {
+      "group": "low",
+      "n": 0,
+      "coverage": 0.0,
+      "true_class_count": 0,
+      "accuracy": null,
+      "micro_precision": null,
+      "micro_recall": null,
+      "micro_f1": null,
+      "weighted_precision": null,
+      "weighted_recall": null,
+      "weighted_f1": null,
+      "macro_precision": null,
+      "macro_recall": null,
+      "macro_f1": null
+    }
+  ],
+  "class_counts_note": "Class counts are not additive; one class can appear in multiple strata."
+}

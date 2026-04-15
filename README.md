@@ -15,7 +15,9 @@ A descriptor-based deep learning framework for multi-class drug-drug interaction
 | Setting | Accuracy | Macro F1 |
 |---|---|---|
 | T-DDI (full test set) | 0.9434 | 0.8452 |
-| T-DDI with UE (high-confidence subset, 95.62% of samples) | 0.9661 | 0.8843 |
+| T-DDI with UE (high-confidence subset, threshold = 0.88, 87.91% of samples) | 0.9796 | 0.8992 |
+
+The DDI2025 high-confidence threshold is `0.88`. It was selected on three-fold out-of-fold development predictions as the smallest confidence cutoff reaching at least 95% OOF accuracy. The lower confidence boundary is fixed at `0.50`. The frozen threshold artifact and OOF sweep are provided under `reproducibility/ddi2025/`. In the DDI2018 benchmark analysis, the same OOF selection rule selected a dataset-specific high-confidence threshold of `0.90`.
 
 ---
 
@@ -119,11 +121,27 @@ python arch/general.py \
     --test_path material/test_extracted.csv \
     --feature_list_path material/list_of_all_features_ascending_order.txt \
     --num_features_to_drop 6 \
+    --threshold_json reproducibility/ddi2025/selected_thresholds_full3780_new_submit.json \
     --n_folds 3 \
     --num_epochs 200 \
     --patience 50 \
     --output_dir results
 ```
+
+The training script writes `results.csv`, `confidence_strata_metrics.csv`, and `thresholds_used.json` under the requested output directory. To override the JSON artifact manually, pass `--t_high 0.88 --t_low 0.50`.
+
+### Confidence threshold reproduction
+
+The DDI2025 OOF threshold selection can be recomputed from OOF prediction CSVs with:
+
+```bash
+python reproducibility/select_confidence_threshold.py \
+    --oof_predictions best_model_and_results/full3780_new_submit_oof_threshold/oof_predictions_full3780_new_submit.csv \
+    --test_predictions best_model_and_results/full3780_new_submit_oof_threshold/test_predictions_full3780_new_submit_threshold.csv \
+    --out_dir reproducibility/ddi2025
+```
+
+The script selects the smallest threshold in `[0.50, 0.99]` that reaches at least 95% OOF accuracy, then applies the frozen threshold to the held-out test predictions.
 
 
 ## Project Structure
@@ -138,6 +156,7 @@ tddi/
 │   └── utils.py            # Uncertainty quantification utilities
 ├── material/               # Place dataset CSV files here
 ├── PyBioMed/               # Descriptor computation (Python 2.7)
+├── reproducibility/        # Threshold artifacts and OOF threshold script
 ├── lime_explanations_300dpi/  # Example LIME output figures
 ├── .env.example            # Environment variable template
 ├── requirements.txt
@@ -160,7 +179,7 @@ No installation needed. The web app is available at:
 
 The output includes:
 - Predicted DDI type and confidence score
-- Confidence tier: High (≥0.86), Medium (0.50–0.86), or Low (<0.50)
+- Confidence tier: High (≥0.88), Medium (0.50–0.88), or Low (<0.50)
 - LIME feature importance plot (if enabled)
 - Natural language explanation (if enabled)
 
@@ -175,8 +194,8 @@ Average processing time is approximately 0.015ms to 1 second per pair (depending
 
 | Tier | Confidence | Interpretation |
 |---|---|---|
-| High | ≥ 0.86 | Suitable for automated flagging |
-| Medium | 0.50–0.86 | Should undergo expert review |
+| High | ≥ 0.88 | Suitable for automated flagging |
+| Medium | 0.50–0.88 | Should undergo expert review |
 | Low | < 0.50 | Warrants additional investigation |
 
 ### Accessibility
