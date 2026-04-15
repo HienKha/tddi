@@ -59,6 +59,20 @@ def load_thresholds(
 
 def classification_metrics(y_true, y_pred) -> Dict[str, float]:
     """Return the metric set used in the manuscript tables."""
+    if len(y_true) == 0:
+        return {
+            "accuracy": np.nan,
+            "micro_precision": np.nan,
+            "micro_recall": np.nan,
+            "micro_f1": np.nan,
+            "weighted_precision": np.nan,
+            "weighted_recall": np.nan,
+            "weighted_f1": np.nan,
+            "macro_precision": np.nan,
+            "macro_recall": np.nan,
+            "macro_f1": np.nan,
+        }
+
     report = classification_report(y_true, y_pred, output_dict=True, zero_division=0)
     accuracy = accuracy_score(y_true, y_pred)
     return {
@@ -104,6 +118,193 @@ def confidence_stratum_metrics(name: str, mask, y_true, y_pred) -> Dict[str, flo
     return result
 
 
+def json_safe(obj):
+    """Convert numpy/pandas scalar values to JSON-serializable Python values."""
+    if isinstance(obj, dict):
+        return {str(k): json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [json_safe(v) for v in obj]
+    if isinstance(obj, tuple):
+        return [json_safe(v) for v in obj]
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, (np.integer,)):
+        return int(obj)
+    if isinstance(obj, (np.floating,)):
+        if np.isnan(obj):
+            return None
+        return float(obj)
+    if isinstance(obj, float) and np.isnan(obj):
+        return None
+    return obj
+
+
+def dataframe_to_float32_array(X_df) -> np.ndarray:
+    """Convert a feature dataframe/array to float32 without changing row order."""
+    if isinstance(X_df, pd.DataFrame):
+        return X_df.to_numpy(dtype=np.float32, copy=False)
+    return np.asarray(X_df, dtype=np.float32)
+
+
+def predict_single_model_with_confidence(
+    model,
+    X_df,
+    y_true,
+    categories: List[int],
+    num_continuous: int,
+    device: torch.device,
+    batch_size: int
+) -> Dict[str, np.ndarray]:
+    """Predict one fold's validation split for OOF threshold tuning."""
+    X_np = dataframe_to_float32_array(X_df)
+    y_np = np.asarray(y_true)
+    dataset = TensorDataset(torch.from_numpy(X_np), torch.LongTensor(y_np))
+    loader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        pin_memory=torch.cuda.is_available(),
+    )
+
+    pred_list = []
+    pred_prob_max_list = []
+    entropy_list = []
+    conf_list = []
+    true_list = []
+    cat_len = len(categories)
+
+    model.eval()
+    with torch.no_grad():
+        for batch_x, batch_y in loader:
+            batch_x = batch_x.to(device, non_blocking=True)
+            cat_features = batch_x[:, :cat_len].long()
+            cont_features = batch_x[:, cat_len:] if num_continuous > 0 else None
+
+            outputs = model(cat_features, cont_features)
+            probs = torch.softmax(outputs, dim=1).detach().cpu().numpy()
+            probs_clip = np.clip(probs, 1e-8, 1 - 1e-8)
+            entropy = -np.sum(probs_clip * np.log(probs_clip), axis=1)
+            confidence = 1.0 - entropy / np.log(probs.shape[1])
+
+            pred_list.append(np.argmax(probs, axis=1))
+            pred_prob_max_list.append(probs.max(axis=1))
+            entropy_list.append(entropy)
+            conf_list.append(confidence)
+            true_list.append(batch_y.numpy())
+
+    return {
+        "pred_class": np.concatenate(pred_list),
+        "pred_prob_max": np.concatenate(pred_prob_max_list),
+        "entropy": np.concatenate(entropy_list),
+        "confidence": np.concatenate(conf_list),
+        "true_class": np.concatenate(true_list),
+    }
+
+
+def build_oof_predictions(
+    X_combined,
+    y_combined,
+    cv_splits,
+    fold_models,
+    categories: List[int],
+    num_continuous: int,
+    device: torch.device,
+    batch_size: int
+) -> pd.DataFrame:
+    """Generate leak-free OOF predictions, one held-out fold at a time."""
+    y_combined_np = np.asarray(y_combined)
+    oof_frames = []
+
+    for fold_idx, ((_, val_idx), model) in enumerate(zip(cv_splits, fold_models), start=1):
+        print(f"Running OOF inference for fold {fold_idx}/{len(cv_splits)} ({len(val_idx):,} rows)")
+        X_fold_val = X_combined.iloc[val_idx] if isinstance(X_combined, pd.DataFrame) else X_combined[val_idx]
+        y_fold_val = y_combined_np[val_idx]
+
+        fold_res = predict_single_model_with_confidence(
+            model=model,
+            X_df=X_fold_val,
+            y_true=y_fold_val,
+            categories=categories,
+            num_continuous=num_continuous,
+            device=device,
+            batch_size=batch_size,
+        )
+
+        fold_df = pd.DataFrame({
+            "global_idx": val_idx,
+            "fold": fold_idx,
+            "true_class": fold_res["true_class"].astype(int),
+            "pred_class": fold_res["pred_class"].astype(int),
+            "pred_prob_max": fold_res["pred_prob_max"].astype(float),
+            "entropy": fold_res["entropy"].astype(float),
+            "confidence": fold_res["confidence"].astype(float),
+        })
+        fold_df["correct"] = (fold_df["true_class"] == fold_df["pred_class"]).astype(int)
+        oof_frames.append(fold_df)
+        MemoryOptimizer.cleanup_memory()
+
+    oof_df = (
+        pd.concat(oof_frames, axis=0, ignore_index=True)
+        .sort_values("global_idx")
+        .reset_index(drop=True)
+    )
+
+    if len(oof_df) != len(y_combined_np):
+        raise RuntimeError("OOF row count does not match development-set size")
+    if oof_df["global_idx"].nunique() != len(y_combined_np):
+        raise RuntimeError("Each development-set sample must appear exactly once in OOF predictions")
+
+    return oof_df
+
+
+def select_threshold_from_oof(
+    oof_df: pd.DataFrame,
+    t_low: float,
+    target_oof_accuracy: float
+) -> Tuple[pd.DataFrame, Dict]:
+    """Sweep OOF confidence thresholds and select the smallest qualifying value."""
+    y_oof = oof_df["true_class"].to_numpy()
+    p_oof = oof_df["pred_class"].to_numpy()
+    c_oof = oof_df["confidence"].to_numpy()
+
+    baseline_metrics = classification_metrics(y_oof, p_oof)
+    baseline_metrics["n"] = int(len(y_oof))
+
+    rows = []
+    threshold_grid = np.round(np.arange(t_low, 0.991, 0.01), 2)
+    for threshold in threshold_grid:
+        high_mask = c_oof >= threshold
+        metrics = classification_metrics(y_oof[high_mask], p_oof[high_mask])
+        rows.append({
+            "threshold": float(threshold),
+            "n_high": int(high_mask.sum()),
+            "coverage": float(high_mask.mean()),
+            **metrics,
+        })
+
+    sweep_df = pd.DataFrame(rows)
+    eligible = sweep_df[sweep_df["accuracy"] >= target_oof_accuracy].sort_values(
+        ["threshold", "coverage"],
+        ascending=[True, False],
+    )
+    if eligible.empty:
+        raise RuntimeError(
+            f"No OOF threshold reached accuracy >= {target_oof_accuracy:.2f}"
+        )
+
+    selected_row = eligible.iloc[0].to_dict()
+    selected_payload = {
+        "target_oof_accuracy": target_oof_accuracy,
+        "selection_rule": f"smallest threshold with OOF accuracy >= {target_oof_accuracy:.2f}",
+        "t_high": float(selected_row["threshold"]),
+        "t_low": float(t_low),
+        "baseline_oof_metrics": baseline_metrics,
+        "selected_row": selected_row,
+        "tier_rule": "high: confidence >= t_high; medium: t_low <= confidence < t_high; low: confidence < t_low",
+    }
+    return sweep_df, selected_payload
+
+
 def main(
     train_path: str,
     test_path: str,
@@ -114,6 +315,8 @@ def main(
     threshold_json: Optional[str] = None,
     t_high: float = 0.88,
     t_low: float = 0.50,
+    target_oof_accuracy: float = 0.95,
+    skip_oof_threshold_selection: bool = False,
     n_folds: int = 3,
     num_epochs: int = 200,
     patience: int = 50,
@@ -132,6 +335,8 @@ def main(
         threshold_json: JSON artifact containing frozen t_high and t_low values
         t_high: High-confidence threshold selected from OOF development predictions
         t_low: Lower confidence boundary fixed a priori
+        target_oof_accuracy: OOF accuracy target for threshold selection
+        skip_oof_threshold_selection: Skip OOF prediction/sweep generation
         n_folds: Number of cross-validation folds
         num_epochs: Maximum training epochs
         patience: Early stopping patience
@@ -269,6 +474,47 @@ def main(
     print(f"Best fold: {np.argmax(fold_scores)+1} with score: {np.max(fold_scores):.4f}")
     print(f"Worst fold: {np.argmin(fold_scores)+1} with score: {np.min(fold_scores):.4f}")
     print(f"{'='*50}")
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    if not skip_oof_threshold_selection:
+        print("\nGenerating OOF predictions for confidence-threshold selection...")
+        oof_df = build_oof_predictions(
+            X_combined=X_combined,
+            y_combined=y_combined,
+            cv_splits=cv_splits,
+            fold_models=fold_models,
+            categories=categories,
+            num_continuous=num_continuous,
+            device=device,
+            batch_size=best_params["batch_size"],
+        )
+        oof_predictions_path = os.path.join(output_dir, "oof_predictions.csv")
+        oof_df.to_csv(oof_predictions_path, index=False)
+
+        oof_sweep_df, oof_threshold_payload = select_threshold_from_oof(
+            oof_df=oof_df,
+            t_low=t_low,
+            target_oof_accuracy=target_oof_accuracy,
+        )
+        oof_sweep_path = os.path.join(output_dir, "oof_threshold_sweep.csv")
+        selected_thresholds_path = os.path.join(output_dir, "selected_thresholds_from_oof.json")
+        oof_sweep_df.to_csv(oof_sweep_path, index=False)
+        with open(selected_thresholds_path, "w", encoding="utf-8") as f:
+            json.dump(json_safe(oof_threshold_payload), f, indent=2)
+
+        print(f"OOF predictions saved to: {oof_predictions_path}")
+        print(f"OOF threshold sweep saved to: {oof_sweep_path}")
+        print(f"Selected OOF thresholds saved to: {selected_thresholds_path}")
+        print(f"OOF-selected t_high={oof_threshold_payload['t_high']:.2f}")
+
+        if threshold_json is None:
+            t_high = float(oof_threshold_payload["t_high"])
+            t_low = float(oof_threshold_payload["t_low"])
+            threshold_source = selected_thresholds_path
+            print(f"Using OOF-selected thresholds for held-out test: t_high={t_high:.2f}, t_low={t_low:.2f}")
+        else:
+            print("Keeping thresholds loaded from --threshold_json for held-out test evaluation.")
     
     # Evaluate on test set with uncertainty estimation
     print(f"\nEvaluating on test set with uncertainty estimation...")
@@ -342,7 +588,6 @@ def main(
         ]
         
         # Save results
-        os.makedirs(output_dir, exist_ok=True)
         result_dict = {
             'num_features_dropped': number_of_features_to_drop,
             'num_classes': num_classes,
@@ -377,12 +622,12 @@ def main(
 
         thresholds_path = os.path.join(output_dir, "thresholds_used.json")
         with open(thresholds_path, "w", encoding="utf-8") as f:
-            json.dump({
+            json.dump(json_safe({
                 "t_high": t_high,
                 "t_low": t_low,
                 "threshold_source": threshold_source,
                 "tier_rule": "high: confidence >= t_high; medium: t_low <= confidence < t_high; low: confidence < t_low",
-            }, f, indent=2)
+            }), f, indent=2)
         print(f"Threshold metadata saved to: {thresholds_path}")
     
     print("\nTraining and evaluation completed!")
@@ -408,6 +653,10 @@ if __name__ == "__main__":
                         help='High-confidence threshold selected from OOF development predictions')
     parser.add_argument('--t_low', type=float, default=0.50,
                         help='Lower confidence boundary')
+    parser.add_argument('--target_oof_accuracy', type=float, default=0.95,
+                        help='OOF accuracy target used to select t_high')
+    parser.add_argument('--skip_oof_threshold_selection', action='store_true',
+                        help='Skip OOF prediction generation and threshold sweep')
     parser.add_argument('--n_folds', type=int, default=3,
                         help='Number of CV folds')
     parser.add_argument('--num_epochs', type=int, default=200,
@@ -428,6 +677,8 @@ if __name__ == "__main__":
         threshold_json=args.threshold_json,
         t_high=args.t_high,
         t_low=args.t_low,
+        target_oof_accuracy=args.target_oof_accuracy,
+        skip_oof_threshold_selection=args.skip_oof_threshold_selection,
         n_folds=args.n_folds,
         num_epochs=args.num_epochs,
         patience=args.patience,

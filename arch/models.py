@@ -5,9 +5,17 @@ import pandas as pd
 from typing import Dict, List
 from torch.utils.data import DataLoader, TensorDataset
 from tab_transformer_pytorch import TabTransformer
-from .utils import UncertaintyEstimator
+try:
+    from .utils import UncertaintyEstimator
+except ImportError:
+    from utils import UncertaintyEstimator
 
 class FocalLoss(nn.Module):
+    """Focal loss with optional class weights.
+
+    The manuscript experiments use the unweighted setting (`alpha=None`),
+    equivalent to alpha_t = 1 for every class.
+    """
     def __init__(self, alpha=None, gamma=2.0, reduction='mean'):
         super(FocalLoss, self).__init__()
         self.alpha = alpha
@@ -115,4 +123,3 @@ class TDDI_Model:
         if self.interpreter is None:
             raise ValueError("Interpreter not initialized. Set self.interpreter first.")
         return self.interpreter.permutation_importance(test_loader)
-

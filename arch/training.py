@@ -3,8 +3,12 @@ import torch.nn as nn
 import numpy as np
 import pandas as pd
 from torch.utils.data import DataLoader, TensorDataset
-from .models import FocalLoss
-from .utils import MemoryOptimizer
+try:
+    from .models import FocalLoss
+    from .utils import MemoryOptimizer
+except ImportError:
+    from models import FocalLoss
+    from utils import MemoryOptimizer
 
 def train_single_model(X_fold_train, y_fold_train, X_fold_val, y_fold_val, 
                       fold_num, enhanced_model, best_params, categories, 
@@ -38,6 +42,8 @@ def train_single_model(X_fold_train, y_fold_train, X_fold_val, y_fold_val,
         lr=best_params['learning_rate'],
         weight_decay=best_params['weight_decay']
     )
+    # Final manuscript experiments use unweighted focal loss:
+    # alpha_t is set to 1 for all classes, while gamma emphasizes hard examples.
     criterion = FocalLoss(gamma=best_params['gamma'])
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50)
     
@@ -130,4 +136,3 @@ def train_single_model(X_fold_train, y_fold_train, X_fold_val, y_fold_val,
     print(f"Fold {fold_num} completed - Best Val Acc: {best_val_acc:.4f}")
     
     return model, best_val_acc, train_losses, val_accuracies
-

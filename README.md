@@ -121,14 +121,13 @@ python arch/general.py \
     --test_path material/test_extracted.csv \
     --feature_list_path material/list_of_all_features_ascending_order.txt \
     --num_features_to_drop 6 \
-    --threshold_json reproducibility/ddi2025/selected_thresholds_full3780_new_submit.json \
     --n_folds 3 \
     --num_epochs 200 \
     --patience 50 \
     --output_dir results
 ```
 
-The training script writes `results.csv`, `confidence_strata_metrics.csv`, and `thresholds_used.json` under the requested output directory. To override the JSON artifact manually, pass `--t_high 0.88 --t_low 0.50`.
+The training script writes `oof_predictions.csv`, `oof_threshold_sweep.csv`, `selected_thresholds_from_oof.json`, `results.csv`, `confidence_strata_metrics.csv`, and `thresholds_used.json` under the requested output directory. By default, the held-out test set is evaluated using the OOF-selected threshold from the current run. To reuse the frozen DDI2025 manuscript threshold artifact instead, pass `--threshold_json reproducibility/ddi2025/selected_thresholds_full3780_new_submit.json`.
 
 ### Confidence threshold reproduction
 
@@ -210,7 +209,7 @@ T-DDI is a TabTransformer-inspired architecture operating exclusively on continu
 - **Input:** 3,780 physicochemical descriptors per drug pair spanning 7 descriptor families (MR_VSA, EState_VSA, SlogP_VSA, LabuteASA, MTPSA, PEOE_VSA, VSA_EState) and their cross-family interaction terms
 - **Architecture:** TabTransformer-inspired numerical branch: layer normalization over 3,780 continuous QSAR descriptors followed by the TabTransformer MLP prediction head. The categorical embedding and self-attention branch is inactive in the final numerical-only T-DDI configuration.
 - **Parameters:** 87,448,646 (all trainable)
-- **Training:** 3-fold stratified ensemble with focal loss to handle class imbalance
+- **Training:** 3-fold stratified ensemble with unweighted focal loss (`gamma=1.0`) to emphasize hard examples under class imbalance
 - **Uncertainty:** Entropy, variance, and mutual information aggregated across ensemble members, normalized to a [0,1] confidence score
 - **Hardware:** Trained on NVIDIA RTX 4090 (24 GB VRAM); inference ~0.0151 ms per drug pair (on cuda)
 

@@ -3,7 +3,10 @@ import numpy as np
 import polars as pl
 from sklearn.preprocessing import LabelEncoder
 from tqdm import tqdm
-from .utils import MemoryOptimizer
+try:
+    from .utils import MemoryOptimizer
+except ImportError:
+    from utils import MemoryOptimizer
 
 
 def load_and_clean_data(path, columns_to_drop):
@@ -95,4 +98,3 @@ def preprocess_ultra_fast(train_df, test_df, valid_df, target_col='class'):
     
     return (X_train, y_train_encoded, X_test, y_test_encoded, X_valid, y_valid_encoded, 
             categorical_cols, numerical_cols, preprocessors)
-
