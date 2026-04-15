@@ -6,8 +6,6 @@
 
 A descriptor-based deep learning framework for multi-class drug-drug interaction (DDI) prediction with uncertainty-aware estimation. T-DDI uses explicit physicochemical descriptors from molecular SMILES and an ensemble-based uncertainty estimator to handle severe class imbalance across 178 DDI types.
 
-**Live demo:** https://projectxddi-tddi-docker.hf.space/
-
 ---
 
 ## Key Results (DDI2025 test set)
@@ -17,7 +15,7 @@ A descriptor-based deep learning framework for multi-class drug-drug interaction
 | T-DDI (full test set) | 0.9434 | 0.8452 |
 | T-DDI with UE (high-confidence subset, threshold = 0.88, 87.91% of samples) | 0.9796 | 0.8992 |
 
-The DDI2025 high-confidence threshold is `0.88`. It was selected on three-fold out-of-fold development predictions as the smallest confidence cutoff reaching at least 95% OOF accuracy. The lower confidence boundary is fixed at `0.50`. The frozen threshold artifact and OOF sweep are provided under `reproducibility/ddi2025/`. In the DDI2018 benchmark analysis, the same OOF selection rule selected a dataset-specific high-confidence threshold of `0.90`.
+The DDI2025 high-confidence threshold is `0.88`, selected on three-fold out-of-fold (OOF) development predictions as the smallest confidence cutoff reaching at least 95% OOF accuracy. The lower confidence boundary is fixed at `0.50`. The frozen threshold artifact and OOF sweep are provided under `reproducibility/ddi2025/`. In the DDI2018 benchmark analysis, the same OOF selection rule selected a dataset-specific threshold of `0.90`.
 
 ---
 
@@ -30,11 +28,9 @@ pip install -r requirements.txt
 ```
 
 **Requirements:** Python 3.8+, CUDA-capable GPU recommended.
-See `requirements.txt` for the training and reproducibility dependency list.
-The live web application is deployed separately and does not need to be
-installed to reproduce the manuscript tables.
+See `requirements.txt` for the full dependency list. The live web application is deployed separately and does not need to be installed to reproduce the manuscript tables.
 
-> **Note on descriptor computation:** The 3,780 QSAR descriptors used in this study were computed using PyBioMed (PyInteraction module) with RDKit 2017.09.3 under Python 2.7.18. This step is separate from model training (which uses Python 3.8+). Pre-computed descriptors are available via the dataset link below. The vendored `PyBioMed/` directory is retained for provenance of the legacy descriptor-generation environment; model training starts from the pre-computed descriptor CSV files.
+> **Note on descriptor computation:** The 3,780 QSAR descriptors were computed using PyBioMed (PyInteraction module) with RDKit 2017.09.3 under Python 2.7.18. This step is separate from model training (Python 3.8+). Pre-computed descriptors are available via the dataset link below. The vendored `PyBioMed/` directory is retained for provenance; model training starts from the pre-computed descriptor CSV files.
 
 ---
 
@@ -43,10 +39,6 @@ installed to reproduce the manuscript tables.
 The DDI2025 dataset (868,069 drug pairs, 178 interaction types, 3,780 QSAR descriptors) is publicly available on Zenodo:
 
 **https://doi.org/10.5281/zenodo.17923583**
-
-The DDI2025 pretrained model and confidence-threshold artifacts are available on Zenodo:
-
-**https://doi.org/10.5281/zenodo.19588891**
 
 Download and extract the dataset:
 
@@ -71,8 +63,6 @@ mv data_splits/test_extracted.csv material/test_extracted.csv
 ```
 
 ### CSV format
-
-Each file contains the following columns:
 
 **Drug identity columns (6 columns):**
 
@@ -99,25 +89,7 @@ Computed per drug pair using PyBioMed (PyInteraction module) and RDKit 2017.09.3
 | `PEOE_VSA` | Partial Equalization of Orbital Electronegativity VSA | Ionization, partial atomic charges |
 | `VSA_EState` | van der Waals Surface Area-based E-state | Electronic-spatial combined |
 
-Cross-family interaction terms (pairwise products of descriptors from distinct families, e.g., `SlogP_VSA × PEOE_VSA`) are also included and account for the majority of the 3,780 total features. These cross-terms capture synergistic relationships between polarity and hydrophobicity at the drug-pair level.
-
-### Descriptor-generation provenance
-
-The descriptor-generation code is vendored under `PyBioMed/` to preserve the
-legacy PyBioMed/PyInteraction code path used for descriptor provenance. This is
-not required for model training if the Zenodo descriptor CSV files are used.
-
-For descriptor recomputation from SMILES, use a separate legacy environment:
-
-```bash
-cd PyBioMed
-conda env create -f conda-env-27.yml
-conda activate py27
-python setup.py install
-```
-
-The environment pins Python 2.7.18 and RDKit 2017.09.3 to match the descriptor
-generation setup reported in the manuscript.
+Cross-family interaction terms (pairwise products of descriptors from distinct families, e.g., `SlogP_VSA × PEOE_VSA`) are also included and account for the majority of the 3,780 total features.
 
 **Target column (1 column):**
 
@@ -134,28 +106,37 @@ material/
 └── test_extracted.csv
 ```
 
+### Descriptor-generation provenance
+
+The descriptor-generation code is vendored under `PyBioMed/` to preserve the legacy PyBioMed/PyInteraction code path. This is not required for model training if the Zenodo descriptor CSV files are used.
+
+For descriptor recomputation from SMILES, use a separate legacy environment:
+
+```bash
+cd PyBioMed
+conda env create -f conda-env-27.yml
+conda activate py27
+python setup.py install
+```
+
+The environment pins Python 2.7.18 and RDKit 2017.09.3 to match the descriptor generation setup reported in the manuscript.
+
 ---
 
 ## Pretrained Model Artifacts
 
-The Zenodo model archive contains the final DDI2025 3-fold ensemble checkpoint,
-individual fold checkpoints, the OOF prediction CSV used for threshold
-selection, held-out test predictions, feature schema, label mapping, and
-checksum manifest:
+The DDI2025 pretrained model and confidence-threshold artifacts are available on Zenodo:
 
 **https://doi.org/10.5281/zenodo.19588891**
 
-The expected DDI2025 threshold artifact selects `t_high = 0.88` and reproduces
-the manuscript high-confidence subset metrics:
-
-| Setting | Coverage | Accuracy | Macro F1 |
-|---|---:|---:|---:|
-| High-confidence subset | 87.91% | 0.9796 | 0.8992 |
+The archive contains the final 3-fold ensemble checkpoint, individual fold checkpoints, the OOF prediction CSV used for threshold selection, held-out test predictions, feature schema, label mapping, and checksum manifest.
 
 ---
 
 ## Training
-To replicate the numerical-only T-DDI configuration described in the paper and ensure its feasibility for production, we established the number of epochs at 200 and patience at 50, drop the six metadata/identity columns (`drugid-drug_a`, `drugid-drug_b`, `drugname-drug_a`, `drugname-drug_b`, `drugsmiles-drug_a`, `drugsmiles-drug_b`) before training.
+
+To replicate the numerical-only T-DDI configuration, drop the six identity columns (described above) before training. The number of epochs is set to 200 with a patience of 50.
+
 ```bash
 python arch/general.py \
     --train_path material/train_extracted.csv \
@@ -184,6 +165,7 @@ python reproducibility/select_confidence_threshold.py \
 
 The script selects the smallest threshold in `[0.50, 0.99]` that reaches at least 95% OOF accuracy, then applies the frozen threshold to the held-out test predictions.
 
+---
 
 ## Project Structure
 
@@ -208,27 +190,20 @@ tddi/
 
 ## Using the Web Application
 
-This public repository contains the training, evaluation, and reproducibility
-code for the manuscript. The web application is a deployed demo built around
-the same model artifacts. This web application allows users to predict drug-drug interactions (DDI) between two medications for analytical purposes.
+The web application is a deployed demo built around the same model artifacts. No installation needed:
 
-No installation needed. The web app is available at:  
 **https://projectxddi-tddi-docker.hf.space/**
 
 ### Single Pair Prediction
 1. Go to the **Single Pair** tab
 2. Enter the names of two drugs (e.g., *Metformin* and *Cimetidine*)
 3. Optionally enable **LIME Explanation** to see which molecular features drive the prediction
-4. Optionally enable **AI Interpretation (Gemini)** for a natural language summary of the predicted interaction
+4. Optionally enable **AI Interpretation (Gemini)** for a natural language summary
 5. Click **Analyze Interaction**
 
-The output includes:
-- Predicted DDI type and confidence score
-- Confidence tier: High (≥0.88), Medium (0.50–0.88), or Low (<0.50)
-- LIME feature importance plot (if enabled)
-- Natural language explanation (if enabled)
+The output includes the predicted DDI type, confidence score, confidence tier, LIME feature importance plot (if enabled), and natural language explanation (if enabled).
 
-Average processing time is approximately 0.015ms to 1 second per pair (depending on using cuda/cpu or network stability) for model prediction without LIME/AI interpretation. Average processing time is approximately 7–8 seconds per pair for model prediction with LIME explanation, and approximately 24 seconds per pair when the AI interpretation module is enabled.
+Average processing time: ~0.015ms–1s per pair (model only), ~7–8s with LIME, ~24s with AI interpretation.
 
 ### Multiple Pair Prediction
 1. Go to the **Multiple Pair** tab
@@ -252,12 +227,12 @@ The interface includes an adaptive color palette (orange-yellow-blue) optimized 
 
 T-DDI is a TabTransformer-inspired architecture operating exclusively on continuous numerical QSAR descriptors (no categorical inputs):
 
-- **Input:** 3,780 physicochemical descriptors per drug pair spanning 7 descriptor families (MR_VSA, EState_VSA, SlogP_VSA, LabuteASA, MTPSA, PEOE_VSA, VSA_EState) and their cross-family interaction terms
-- **Architecture:** TabTransformer-inspired numerical branch: layer normalization over 3,780 continuous QSAR descriptors followed by the TabTransformer MLP prediction head. The categorical embedding and self-attention branch is inactive in the final numerical-only T-DDI configuration. We exclusively employ the numerical branch for inference due to the large parameters in the ensemble model.
+- **Input:** 3,780 physicochemical descriptors per drug pair (7 descriptor families + cross-family interaction terms)
+- **Architecture:** Layer normalization over 3,780 continuous QSAR descriptors followed by the TabTransformer MLP prediction head. The categorical embedding and self-attention branch is inactive in the final numerical-only configuration.
 - **Parameters:** 87,448,646 (all trainable)
-- **Training:** 3-fold stratified ensemble with unweighted focal loss (`gamma=1.0`) to emphasize hard examples under class imbalance
+- **Training:** 3-fold stratified ensemble with unweighted focal loss (`gamma=1.0`)
 - **Uncertainty:** Entropy, variance, and mutual information aggregated across ensemble members, normalized to a [0,1] confidence score
-- **Hardware:** Trained on NVIDIA RTX 4090 (24 GB VRAM); inference ~0.0151 ms per drug pair (on cuda)
+- **Hardware:** Trained on NVIDIA RTX 4090 (24 GB VRAM); inference ~0.0151 ms per drug pair on CUDA
 
 ---
 
