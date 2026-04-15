@@ -30,9 +30,11 @@ pip install -r requirements.txt
 ```
 
 **Requirements:** Python 3.8+, CUDA-capable GPU recommended.
-See `requirements.txt` for the full dependency list.
+See `requirements.txt` for the training and reproducibility dependency list.
+The live web application is deployed separately and does not need to be
+installed to reproduce the manuscript tables.
 
-> **Note on descriptor computation:** The 3,780 QSAR descriptors used in this study were computed using PyBioMed (PyInteraction module) with RDKit 2017.09.3 under Python 2.7.18. This step is separate from model training (which uses Python 3.8+). Pre-computed descriptors are available via the dataset link below.
+> **Note on descriptor computation:** The 3,780 QSAR descriptors used in this study were computed using PyBioMed (PyInteraction module) with RDKit 2017.09.3 under Python 2.7.18. This step is separate from model training (which uses Python 3.8+). Pre-computed descriptors are available via the dataset link below. The vendored `PyBioMed/` directory is retained for provenance of the legacy descriptor-generation environment; model training starts from the pre-computed descriptor CSV files.
 
 ---
 
@@ -41,6 +43,10 @@ See `requirements.txt` for the full dependency list.
 The DDI2025 dataset (868,069 drug pairs, 178 interaction types, 3,780 QSAR descriptors) is publicly available on Zenodo:
 
 **https://doi.org/10.5281/zenodo.17923583**
+
+The DDI2025 pretrained model and confidence-threshold artifacts are available on Zenodo:
+
+**https://doi.org/10.5281/zenodo.19588891**
 
 Download and extract the dataset:
 
@@ -95,6 +101,24 @@ Computed per drug pair using PyBioMed (PyInteraction module) and RDKit 2017.09.3
 
 Cross-family interaction terms (pairwise products of descriptors from distinct families, e.g., `SlogP_VSA × PEOE_VSA`) are also included and account for the majority of the 3,780 total features. These cross-terms capture synergistic relationships between polarity and hydrophobicity at the drug-pair level.
 
+### Descriptor-generation provenance
+
+The descriptor-generation code is vendored under `PyBioMed/` to preserve the
+legacy PyBioMed/PyInteraction code path used for descriptor provenance. This is
+not required for model training if the Zenodo descriptor CSV files are used.
+
+For descriptor recomputation from SMILES, use a separate legacy environment:
+
+```bash
+cd PyBioMed
+conda env create -f conda-env-27.yml
+conda activate py27
+python setup.py install
+```
+
+The environment pins Python 2.7.18 and RDKit 2017.09.3 to match the descriptor
+generation setup reported in the manuscript.
+
 **Target column (1 column):**
 
 | Column | Description |
@@ -109,6 +133,24 @@ material/
 ├── validation_extracted.csv
 └── test_extracted.csv
 ```
+
+---
+
+## Pretrained Model Artifacts
+
+The Zenodo model archive contains the final DDI2025 3-fold ensemble checkpoint,
+individual fold checkpoints, the OOF prediction CSV used for threshold
+selection, held-out test predictions, feature schema, label mapping, and
+checksum manifest:
+
+**https://doi.org/10.5281/zenodo.19588891**
+
+The expected DDI2025 threshold artifact selects `t_high = 0.88` and reproduces
+the manuscript high-confidence subset metrics:
+
+| Setting | Coverage | Accuracy | Macro F1 |
+|---|---:|---:|---:|
+| High-confidence subset | 87.91% | 0.9796 | 0.8992 |
 
 ---
 
@@ -154,7 +196,7 @@ tddi/
 │   ├── training.py         # Fold-level training loop
 │   └── utils.py            # Uncertainty quantification utilities
 ├── material/               # Place dataset CSV files here
-├── PyBioMed/               # Descriptor computation (Python 2.7)
+├── PyBioMed/               # Vendored legacy descriptor code provenance
 ├── reproducibility/        # Threshold artifacts and OOF threshold script
 ├── lime_explanations_300dpi/  # Example LIME output figures
 ├── .env.example            # Environment variable template
@@ -165,6 +207,10 @@ tddi/
 ---
 
 ## Using the Web Application
+
+This public repository contains the training, evaluation, and reproducibility
+code for the manuscript. The web application is a deployed demo built around
+the same model artifacts.
 
 No installation needed. The web app is available at:  
 **https://projectxddi-tddi-docker.hf.space/**
