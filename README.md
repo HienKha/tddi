@@ -134,6 +134,18 @@ The archive contains the final 3-fold ensemble checkpoint, individual fold check
 After downloading and extracting the model archive, the prediction artifacts used
 for threshold reproduction are under `threshold_artifacts/`.
 
+The held-out DDI2025 test set can be evaluated without retraining:
+
+```bash
+python arch/evaluate_saved_model.py \
+    --model_path path/to/tddi_ddi2025_model_artifacts_2026-04-15/models/full3780_new_submit.pkl \
+    --test_path material/test_extracted.csv \
+    --feature_list_path material/list_of_all_features_ascending_order.txt \
+    --num_features_to_drop 6 \
+    --threshold_json reproducibility/ddi2025/selected_thresholds_full3780_new_submit.json \
+    --output_dir results/eval_ddi2025
+```
+
 ---
 
 ## Training
@@ -176,6 +188,7 @@ The script selects the smallest threshold in `[0.50, 0.99]` that reaches at leas
 tddi/
 ├── arch/
 │   ├── general.py          # Main training and evaluation pipeline
+│   ├── evaluate_saved_model.py  # Evaluation-only script for pretrained checkpoints
 │   ├── models.py           # Model architecture and FocalLoss
 │   ├── preprocessing.py    # Data loading and label encoding
 │   ├── training.py         # Fold-level training loop
