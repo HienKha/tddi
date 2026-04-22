@@ -28,8 +28,6 @@ PAPER_DEFAULTS = {
     "focal_gamma": 1.0,
     "hidden_dim": 64,
     "depth": 3,
-    "heads": 16,
-    "attn_dropout": 0.4,
     "ff_dropout": 0.2,
     "seed": 42,
 }
@@ -105,16 +103,12 @@ def build_best_params(
     focal_gamma: float,
     hidden_dim: int,
     depth: int,
-    heads: int,
-    attn_dropout: float,
     ff_dropout: float,
 ) -> Dict[str, float]:
     """Translate user-facing CLI args into the model/training parameter dictionary."""
     return {
         "dim": hidden_dim,
         "depth": depth,
-        "heads": heads,
-        "attn_dropout": attn_dropout,
         "ff_dropout": ff_dropout,
         "mlp_hidden_mult_1": 2,
         "mlp_hidden_mult_2": 2,
@@ -395,8 +389,6 @@ def main(
     focal_gamma: float = PAPER_DEFAULTS["focal_gamma"],
     hidden_dim: int = PAPER_DEFAULTS["hidden_dim"],
     depth: int = PAPER_DEFAULTS["depth"],
-    heads: int = PAPER_DEFAULTS["heads"],
-    attn_dropout: float = PAPER_DEFAULTS["attn_dropout"],
     ff_dropout: float = PAPER_DEFAULTS["ff_dropout"],
     seed: int = PAPER_DEFAULTS["seed"],
 ):
@@ -425,8 +417,6 @@ def main(
         focal_gamma: Gamma value for focal loss
         hidden_dim: TabTransformer embedding dimension
         depth: Transformer depth
-        heads: Number of attention heads
-        attn_dropout: Attention dropout rate
         ff_dropout: Feed-forward dropout rate
         seed: Random seed for NumPy/PyTorch/CV split reproducibility
     """
@@ -444,8 +434,6 @@ def main(
         focal_gamma=focal_gamma,
         hidden_dim=hidden_dim,
         depth=depth,
-        heads=heads,
-        attn_dropout=attn_dropout,
         ff_dropout=ff_dropout,
     )
     if best_params is not None:
@@ -509,7 +497,6 @@ def main(
     print(f"\nHyperparameters:")
     print(f"  - Embedding dimension: {best_params['dim']}")
     print(f"  - Transformer depth: {best_params['depth']}")
-    print(f"  - Attention heads: {best_params['heads']}")
     print(f"  - Learning rate: {best_params['learning_rate']:.2e}")
     print(f"  - Batch size: {best_params['batch_size']}")
     
@@ -779,10 +766,6 @@ if __name__ == "__main__":
                         help='TabTransformer embedding dimension')
     parser.add_argument('--depth', type=int, default=PAPER_DEFAULTS['depth'],
                         help='Transformer depth')
-    parser.add_argument('--heads', type=int, default=PAPER_DEFAULTS['heads'],
-                        help='Number of attention heads')
-    parser.add_argument('--attn_dropout', type=float, default=PAPER_DEFAULTS['attn_dropout'],
-                        help='Attention dropout rate')
     parser.add_argument('--ff_dropout', type=float, default=PAPER_DEFAULTS['ff_dropout'],
                         help='Feed-forward dropout rate')
     parser.add_argument('--seed', type=int, default=PAPER_DEFAULTS['seed'],
@@ -819,8 +802,6 @@ if __name__ == "__main__":
         focal_gamma=args.focal_gamma,
         hidden_dim=args.hidden_dim,
         depth=args.depth,
-        heads=args.heads,
-        attn_dropout=args.attn_dropout,
         ff_dropout=args.ff_dropout,
         seed=args.seed,
     )

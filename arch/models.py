@@ -10,6 +10,8 @@ try:
 except ImportError:
     from utils import UncertaintyEstimator
 
+INACTIVE_CATEGORICAL_BRANCH_COMPAT_HEADS = 16
+
 class FocalLoss(nn.Module):
     """Focal loss with optional class weights.
 
@@ -58,8 +60,7 @@ class TDDI_Model:
             dim=self.best_params['dim'],
             dim_out=self.num_classes,
             depth=self.best_params['depth'],
-            heads=self.best_params['heads'],
-            attn_dropout=self.best_params['attn_dropout'],
+            heads=INACTIVE_CATEGORICAL_BRANCH_COMPAT_HEADS,
             ff_dropout=self.best_params['ff_dropout'],
             mlp_hidden_mults=(
                 self.best_params['mlp_hidden_mult_1'], 

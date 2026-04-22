@@ -26,8 +26,6 @@ python arch/general.py \
     --focal_gamma 1.0 \
     --hidden_dim 64 \
     --depth 3 \
-    --heads 16 \
-    --attn_dropout 0.4 \
     --ff_dropout 0.2 \
     --seed 42 \
     --output_dir results
@@ -213,7 +211,7 @@ python arch/general.py \
     --output_dir results
 ```
 
-Supported paper hyperparameters: `--learning_rate`, `--weight_decay`, `--batch_size`, `--focal_gamma`, `--hidden_dim`, `--depth`, `--heads`, `--attn_dropout`, `--ff_dropout`, and `--seed`.
+Supported paper hyperparameters: `--learning_rate`, `--weight_decay`, `--batch_size`, `--focal_gamma`, `--hidden_dim`, `--depth`, `--ff_dropout`, and `--seed`.
 
 ### Confidence threshold reproduction
 
