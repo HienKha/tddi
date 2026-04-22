@@ -1,7 +1,40 @@
 # T-DDI: Robust Prediction of Drug Interactions using Chemical Descriptors
 
+## Environment
+
+- Python 3.12.0 (model training)
+- Python 2.7.18 (feature extraction with PyBioMed + RDKit 2017.09.3)
+- NVIDIA RTX 4090 (24 GB VRAM)
+
+## Dataset
+
+Pre-processed DDI2025 dataset: https://doi.org/10.5281/zenodo.17923583
+
+## Reproducing paper results
+
+```bash
+python arch/general.py \
+    --train_path material/train.csv \
+    --valid_path material/valid.csv \
+    --test_path material/test.csv \
+    --n_folds 3 \
+    --num_epochs 200 \
+    --patience 50 \
+    --learning_rate 9.4526e-5 \
+    --weight_decay 1.5446e-4 \
+    --batch_size 256 \
+    --focal_gamma 1.0 \
+    --hidden_dim 64 \
+    --depth 3 \
+    --heads 16 \
+    --attn_dropout 0.4 \
+    --ff_dropout 0.2 \
+    --seed 42 \
+    --output_dir results
+```
+
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
+[![Python 3.12.0](https://img.shields.io/badge/python-3.12.0-blue.svg)](https://www.python.org/)
 [![Web App](https://img.shields.io/badge/Web_App-Live-green)](https://projectxddi-tddi-docker.hf.space/)
 
 A descriptor-based deep learning framework for multi-class drug-drug interaction (DDI) prediction with uncertainty-aware estimation. T-DDI uses explicit physicochemical descriptors from molecular SMILES and an ensemble-based uncertainty estimator to handle severe class imbalance across 178 DDI types.
@@ -27,10 +60,10 @@ cd tddi
 pip install -r requirements.txt
 ```
 
-**Requirements:** Python 3.8+, CUDA-capable GPU recommended.
+**Requirements:** Python 3.12.0 for model training, with a CUDA-capable GPU recommended.
 See `requirements.txt` for the full dependency list. The live web application is deployed separately and does not need to be installed to reproduce the manuscript tables.
 
-> **Note on descriptor computation:** The 3,780 QSAR descriptors were computed using PyBioMed (PyInteraction module) with RDKit 2017.09.3 under Python 2.7.18. This step is separate from model training (Python 3.8+). Pre-computed descriptors are available via the dataset link below. The vendored `PyBioMed/` directory is retained for provenance; model training starts from the pre-computed descriptor CSV files.
+> **Note on descriptor computation:** The 3,780 QSAR descriptors were computed using PyBioMed (PyInteraction module) with RDKit 2017.09.3 under Python 2.7.18. This step is separate from model training under Python 3.12.0. Pre-computed descriptors are available via the dataset link below. The vendored `PyBioMed/` directory is retained for provenance; model training starts from the pre-computed descriptor CSV files.
 
 ---
 
