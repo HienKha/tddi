@@ -75,7 +75,8 @@ class TDDI_Model:
         X_test = test_df_enhanced.drop(columns=['class'], errors='ignore')
         test_tensor = torch.FloatTensor(X_test.values)
         test_dataset = TensorDataset(test_tensor, torch.zeros(len(test_tensor)))
-        test_loader = DataLoader(test_dataset, batch_size=256, shuffle=False)
+        batch_size = self.best_params.get('batch_size', 256)
+        test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
         
         all_predictions = []
         all_probabilities = []

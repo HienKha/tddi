@@ -21,10 +21,30 @@ from training import train_single_model
 
 warnings.filterwarnings('ignore')
 
-torch.manual_seed(42)
-np.random.seed(42)
-if torch.cuda.is_available():
-    torch.cuda.manual_seed(42)
+PAPER_DEFAULTS = {
+    "learning_rate": 9.4526e-5,
+    "weight_decay": 1.5446e-4,
+    "batch_size": 256,
+    "focal_gamma": 1.0,
+    "hidden_dim": 64,
+    "depth": 3,
+    "heads": 16,
+    "attn_dropout": 0.4,
+    "ff_dropout": 0.2,
+    "seed": 42,
+}
+
+
+def set_random_seed(seed: int) -> None:
+    """Set all relevant random seeds for reproducible training."""
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+
+
+set_random_seed(PAPER_DEFAULTS["seed"])
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"Using device: {device}")
@@ -55,6 +75,54 @@ def load_thresholds(
     loaded_t_high = payload.get("t_high", payload.get("selected_threshold", t_high))
     loaded_t_low = payload.get("t_low", t_low)
     return float(loaded_t_high), float(loaded_t_low), threshold_json
+
+
+def load_config_defaults(config_path: Optional[str]) -> Dict[str, object]:
+    """Load YAML defaults for the training CLI."""
+    if not config_path:
+        return {}
+
+    try:
+        import yaml
+    except ImportError as exc:
+        raise ImportError(
+            "PyYAML is required when using --config. Install dependencies from requirements.txt."
+        ) from exc
+
+    with open(config_path, "r", encoding="utf-8") as f:
+        payload = yaml.safe_load(f) or {}
+
+    if not isinstance(payload, dict):
+        raise ValueError(f"Config file must contain a top-level mapping: {config_path}")
+
+    return payload
+
+
+def build_best_params(
+    learning_rate: float,
+    weight_decay: float,
+    batch_size: int,
+    focal_gamma: float,
+    hidden_dim: int,
+    depth: int,
+    heads: int,
+    attn_dropout: float,
+    ff_dropout: float,
+) -> Dict[str, float]:
+    """Translate user-facing CLI args into the model/training parameter dictionary."""
+    return {
+        "dim": hidden_dim,
+        "depth": depth,
+        "heads": heads,
+        "attn_dropout": attn_dropout,
+        "ff_dropout": ff_dropout,
+        "mlp_hidden_mult_1": 2,
+        "mlp_hidden_mult_2": 2,
+        "learning_rate": learning_rate,
+        "weight_decay": weight_decay,
+        "batch_size": batch_size,
+        "gamma": focal_gamma,
+    }
 
 
 def classification_metrics(y_true, y_pred) -> Dict[str, float]:
@@ -320,7 +388,17 @@ def main(
     n_folds: int = 3,
     num_epochs: int = 200,
     patience: int = 50,
-    output_dir: str = "results"
+    output_dir: str = "results",
+    learning_rate: float = PAPER_DEFAULTS["learning_rate"],
+    weight_decay: float = PAPER_DEFAULTS["weight_decay"],
+    batch_size: int = PAPER_DEFAULTS["batch_size"],
+    focal_gamma: float = PAPER_DEFAULTS["focal_gamma"],
+    hidden_dim: int = PAPER_DEFAULTS["hidden_dim"],
+    depth: int = PAPER_DEFAULTS["depth"],
+    heads: int = PAPER_DEFAULTS["heads"],
+    attn_dropout: float = PAPER_DEFAULTS["attn_dropout"],
+    ff_dropout: float = PAPER_DEFAULTS["ff_dropout"],
+    seed: int = PAPER_DEFAULTS["seed"],
 ):
     """
     Main training and evaluation pipeline.
@@ -341,26 +419,38 @@ def main(
         num_epochs: Maximum training epochs
         patience: Early stopping patience
         output_dir: Directory to save results
+        learning_rate: AdamW learning rate
+        weight_decay: AdamW weight decay
+        batch_size: Training and inference batch size
+        focal_gamma: Gamma value for focal loss
+        hidden_dim: TabTransformer embedding dimension
+        depth: Transformer depth
+        heads: Number of attention heads
+        attn_dropout: Attention dropout rate
+        ff_dropout: Feed-forward dropout rate
+        seed: Random seed for NumPy/PyTorch/CV split reproducibility
     """
+    set_random_seed(seed)
+    print(f"Random seed: {seed}")
 
     t_high, t_low, threshold_source = load_thresholds(threshold_json, t_high, t_low)
     print(f"Confidence thresholds: t_high={t_high:.2f}, t_low={t_low:.2f}")
     print(f"Threshold source: {threshold_source}")
 
-    if best_params is None:
-        best_params = {
-            'dim': 64,
-            'depth': 3,
-            'heads': 16,
-            'attn_dropout': 0.4,
-            'ff_dropout': 0.2,
-            'mlp_hidden_mult_1': 2,
-            'mlp_hidden_mult_2': 2,
-            'learning_rate': 9.452571391072311e-05,
-            'weight_decay': 0.0001544608907504709,
-            'batch_size': 256,
-            'gamma': 1.0
-        }
+    effective_best_params = build_best_params(
+        learning_rate=learning_rate,
+        weight_decay=weight_decay,
+        batch_size=batch_size,
+        focal_gamma=focal_gamma,
+        hidden_dim=hidden_dim,
+        depth=depth,
+        heads=heads,
+        attn_dropout=attn_dropout,
+        ff_dropout=ff_dropout,
+    )
+    if best_params is not None:
+        effective_best_params.update(best_params)
+    best_params = effective_best_params
     
     # Load feature list if provided
     columns_to_drop = []
@@ -431,7 +521,7 @@ def main(
     print(f"Combined target shape: {y_combined.shape}")
     
     # Cross-validation training
-    skf = StratifiedKFold(n_splits=n_folds, shuffle=True, random_state=42)
+    skf = StratifiedKFold(n_splits=n_folds, shuffle=True, random_state=seed)
     cv_splits = list(skf.split(X_combined, y_combined))
     
     fold_models = []
@@ -635,8 +725,20 @@ def main(
 
 if __name__ == "__main__":
     import argparse
-    
+
+    config_parser = argparse.ArgumentParser(add_help=False)
+    config_parser.add_argument(
+        "--config",
+        type=str,
+        default=None,
+        help="Path to a YAML config file that provides CLI defaults",
+    )
+    config_args, _ = config_parser.parse_known_args()
+    config_defaults = load_config_defaults(config_args.config)
+
     parser = argparse.ArgumentParser(description='Train TDDI Model with uncertainty estimation')
+    parser.add_argument('--config', type=str, default=None,
+                        help='Path to a YAML config file that provides CLI defaults')
     parser.add_argument('--train_path', type=str, required=True,
                         help='Path to training CSV file')
     parser.add_argument('--test_path', type=str, required=True,
@@ -665,9 +767,37 @@ if __name__ == "__main__":
                         help='Early stopping patience')
     parser.add_argument('--output_dir', type=str, default='results',
                         help='Output directory for results')
-    
+    parser.add_argument('--learning_rate', type=float, default=PAPER_DEFAULTS['learning_rate'],
+                        help='AdamW learning rate')
+    parser.add_argument('--weight_decay', type=float, default=PAPER_DEFAULTS['weight_decay'],
+                        help='AdamW weight decay')
+    parser.add_argument('--batch_size', type=int, default=PAPER_DEFAULTS['batch_size'],
+                        help='Training and inference batch size')
+    parser.add_argument('--focal_gamma', type=float, default=PAPER_DEFAULTS['focal_gamma'],
+                        help='Gamma value for focal loss')
+    parser.add_argument('--hidden_dim', type=int, default=PAPER_DEFAULTS['hidden_dim'],
+                        help='TabTransformer embedding dimension')
+    parser.add_argument('--depth', type=int, default=PAPER_DEFAULTS['depth'],
+                        help='Transformer depth')
+    parser.add_argument('--heads', type=int, default=PAPER_DEFAULTS['heads'],
+                        help='Number of attention heads')
+    parser.add_argument('--attn_dropout', type=float, default=PAPER_DEFAULTS['attn_dropout'],
+                        help='Attention dropout rate')
+    parser.add_argument('--ff_dropout', type=float, default=PAPER_DEFAULTS['ff_dropout'],
+                        help='Feed-forward dropout rate')
+    parser.add_argument('--seed', type=int, default=PAPER_DEFAULTS['seed'],
+                        help='Random seed for NumPy/PyTorch/CV split reproducibility')
+
+    allowed_config_keys = {action.dest for action in parser._actions}
+    unknown_config_keys = sorted(set(config_defaults) - allowed_config_keys)
+    if unknown_config_keys:
+        raise ValueError(
+            f"Unsupported config keys in {config_args.config}: {', '.join(unknown_config_keys)}"
+        )
+    parser.set_defaults(**config_defaults)
+
     args = parser.parse_args()
-    
+
     main(
         train_path=args.train_path,
         test_path=args.test_path,
@@ -682,5 +812,15 @@ if __name__ == "__main__":
         n_folds=args.n_folds,
         num_epochs=args.num_epochs,
         patience=args.patience,
-        output_dir=args.output_dir
+        output_dir=args.output_dir,
+        learning_rate=args.learning_rate,
+        weight_decay=args.weight_decay,
+        batch_size=args.batch_size,
+        focal_gamma=args.focal_gamma,
+        hidden_dim=args.hidden_dim,
+        depth=args.depth,
+        heads=args.heads,
+        attn_dropout=args.attn_dropout,
+        ff_dropout=args.ff_dropout,
+        seed=args.seed,
     )

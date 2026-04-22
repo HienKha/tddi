@@ -167,6 +167,21 @@ python arch/general.py \
 
 The training script writes `oof_predictions.csv`, `oof_threshold_sweep.csv`, `selected_thresholds_from_oof.json`, `results.csv`, `confidence_strata_metrics.csv`, and `thresholds_used.json` under the requested output directory. By default, the held-out test set is evaluated using the OOF-selected threshold from the current run. To reuse the frozen DDI2025 manuscript threshold artifact instead, pass `--threshold_json reproducibility/ddi2025/selected_thresholds_full3780_new_submit.json`.
 
+The manuscript hyperparameters are now exposed directly via CLI and mirrored in [`configs/paper_default.yaml`](configs/paper_default.yaml). You can load that preset and still override any individual value on the command line:
+
+```bash
+python arch/general.py \
+    --config configs/paper_default.yaml \
+    --train_path material/train_extracted.csv \
+    --valid_path material/validation_extracted.csv \
+    --test_path material/test_extracted.csv \
+    --feature_list_path material/list_of_all_features_ascending_order.txt \
+    --num_features_to_drop 6 \
+    --output_dir results
+```
+
+Supported paper hyperparameters: `--learning_rate`, `--weight_decay`, `--batch_size`, `--focal_gamma`, `--hidden_dim`, `--depth`, `--heads`, `--attn_dropout`, `--ff_dropout`, and `--seed`.
+
 ### Confidence threshold reproduction
 
 The DDI2025 OOF threshold selection can be recomputed from OOF prediction CSVs with:
