@@ -32,6 +32,11 @@ PAPER_DEFAULTS = {
     "seed": 42,
 }
 
+INTERNAL_COMPAT_DEFAULTS = {
+    "heads": 16,
+    "attn_dropout": 0.4,
+}
+
 
 def set_random_seed(seed: int) -> None:
     """Set all relevant random seeds for reproducible training."""
@@ -103,12 +108,16 @@ def build_best_params(
     focal_gamma: float,
     hidden_dim: int,
     depth: int,
+    heads: int,
+    attn_dropout: float,
     ff_dropout: float,
 ) -> Dict[str, float]:
     """Translate user-facing CLI args into the model/training parameter dictionary."""
     return {
         "dim": hidden_dim,
         "depth": depth,
+        "heads": heads,
+        "attn_dropout": attn_dropout,
         "ff_dropout": ff_dropout,
         "mlp_hidden_mult_1": 2,
         "mlp_hidden_mult_2": 2,
@@ -389,6 +398,8 @@ def main(
     focal_gamma: float = PAPER_DEFAULTS["focal_gamma"],
     hidden_dim: int = PAPER_DEFAULTS["hidden_dim"],
     depth: int = PAPER_DEFAULTS["depth"],
+    heads: int = INTERNAL_COMPAT_DEFAULTS["heads"],
+    attn_dropout: float = INTERNAL_COMPAT_DEFAULTS["attn_dropout"],
     ff_dropout: float = PAPER_DEFAULTS["ff_dropout"],
     seed: int = PAPER_DEFAULTS["seed"],
 ):
@@ -434,6 +445,8 @@ def main(
         focal_gamma=focal_gamma,
         hidden_dim=hidden_dim,
         depth=depth,
+        heads=heads,
+        attn_dropout=attn_dropout,
         ff_dropout=ff_dropout,
     )
     if best_params is not None:
@@ -766,6 +779,10 @@ if __name__ == "__main__":
                         help='TabTransformer embedding dimension')
     parser.add_argument('--depth', type=int, default=PAPER_DEFAULTS['depth'],
                         help='Transformer depth')
+    parser.add_argument('--heads', type=int, default=INTERNAL_COMPAT_DEFAULTS['heads'],
+                        help=argparse.SUPPRESS)
+    parser.add_argument('--attn_dropout', type=float, default=INTERNAL_COMPAT_DEFAULTS['attn_dropout'],
+                        help=argparse.SUPPRESS)
     parser.add_argument('--ff_dropout', type=float, default=PAPER_DEFAULTS['ff_dropout'],
                         help='Feed-forward dropout rate')
     parser.add_argument('--seed', type=int, default=PAPER_DEFAULTS['seed'],
@@ -802,6 +819,8 @@ if __name__ == "__main__":
         focal_gamma=args.focal_gamma,
         hidden_dim=args.hidden_dim,
         depth=args.depth,
+        heads=args.heads,
+        attn_dropout=args.attn_dropout,
         ff_dropout=args.ff_dropout,
         seed=args.seed,
     )
