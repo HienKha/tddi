@@ -14,9 +14,11 @@ Pre-processed DDI2025 dataset: https://doi.org/10.5281/zenodo.17923583
 
 ```bash
 python arch/general.py \
-    --train_path material/train.csv \
-    --valid_path material/valid.csv \
-    --test_path material/test.csv \
+    --train_path material/train_extracted.csv \
+    --valid_path material/validation_extracted.csv \
+    --test_path material/test_extracted.csv \
+    --feature_list_path material/list_of_all_features_ascending_order.txt \
+    --num_features_to_drop 6 \
     --n_folds 3 \
     --num_epochs 200 \
     --patience 50 \
@@ -24,9 +26,6 @@ python arch/general.py \
     --weight_decay 1.5446e-4 \
     --batch_size 256 \
     --focal_gamma 1.0 \
-    --hidden_dim 64 \
-    --depth 3 \
-    --ff_dropout 0.2 \
     --seed 42 \
     --output_dir results
 ```
@@ -198,7 +197,7 @@ python arch/general.py \
 
 The training script writes `oof_predictions.csv`, `oof_threshold_sweep.csv`, `selected_thresholds_from_oof.json`, `results.csv`, `confidence_strata_metrics.csv`, and `thresholds_used.json` under the requested output directory. By default, the held-out test set is evaluated using the OOF-selected threshold from the current run. To reuse the frozen DDI2025 manuscript threshold artifact instead, pass `--threshold_json reproducibility/ddi2025/selected_thresholds_full3780_new_submit.json`.
 
-The manuscript hyperparameters are now exposed directly via CLI and mirrored in [`configs/paper_default.yaml`](configs/paper_default.yaml). You can load that preset and still override any individual value on the command line:
+The active manuscript hyperparameters for the numerical-only configuration are exposed directly via CLI and mirrored in [`configs/paper_default.yaml`](configs/paper_default.yaml). That preset also retains compatibility fields required by the original TabTransformer constructor, but those transformer-specific fields do not affect the numerical-only forward path because no categorical columns are used. You can load the preset and still override any individual value on the command line:
 
 ```bash
 python arch/general.py \
@@ -211,7 +210,7 @@ python arch/general.py \
     --output_dir results
 ```
 
-Supported paper hyperparameters: `--learning_rate`, `--weight_decay`, `--batch_size`, `--focal_gamma`, `--hidden_dim`, `--depth`, `--ff_dropout`, and `--seed`.
+Supported active manuscript hyperparameters: `--learning_rate`, `--weight_decay`, `--batch_size`, `--focal_gamma`, and `--seed`.
 
 ### Confidence threshold reproduction
 
