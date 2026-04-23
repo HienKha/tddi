@@ -1,4 +1,4 @@
-# T-DDI: Robust Prediction of Drug Interactions using Chemical Descriptors
+# Robust Prediction of Drug Interactions using Chemical Descriptors
 
 ## Environment
 
