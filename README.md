@@ -301,9 +301,16 @@ T-DDI is a TabTransformer-inspired architecture operating exclusively on continu
 
 If you use T-DDI in your research, please cite:
 
-```
-Kha, Q.-H., Nguyen, D.-Q.-A., Pham, V.-H.-P., Huynh, K.-M.-U., Pham, D.-K., Phung, M.-T., Huynh, T.-P. et al. T-DDI: Robust Prediction of Drug
-Interactions using Chemical Descriptors. npj Digital Medicine (under review).
+Kha, Q.-H., Nguyen, D.-Q.-A., Pham, V.-H.-P., Huynh, K.-M.-U., Pham, D.-K., Phung, M.-T., Huynh, T.-P. et al. **Robust Prediction of Drug Interactions using Chemical Descriptors.** *npj Digital Medicine* (2026).
+
+```bibtex
+@article{kha2026robust,
+  title={Robust Prediction of Drug Interactions using Chemical Descriptors},
+  author={Kha, Quang-Hien and Nguyen, Duc-Quang-Anh and Hoang, Phi Pham Van and Huynh, Uyen Khoi-Minh and Pham, Khoa D and Phung, Minh-Thu and Huynh, Tan-Phat and Le, Hoang-Bach-Dat and Vo, Nguyen-Phat and Do, Minh-Hieu and others},
+  journal={npj Digital Medicine},
+  year={2026},
+  publisher={Nature Publishing Group UK London}
+}
 ```
 
 ---
